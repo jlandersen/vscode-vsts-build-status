@@ -4,27 +4,27 @@ export class VstsBuildStatusBar {
     private statusBarItem: StatusBarItem;
     
     public displaySuccess(text: string, tooltip: string): void {
-        this.displayStatusBarItem(text, tooltip, 'octicon-check', 'extension.openVstsBuildStatus');
+        this.displayStatusBarItem(text, tooltip, 'octicon-check', 'extension.openVstsBuildSelection');
     }
 
     public displayLoading(text: string, tooltip: string): void {
-        this.displayStatusBarItem(text, tooltip, 'octicon-sync', 'extension.openVstsBuildStatus');
+        this.displayStatusBarItem(text, tooltip, 'octicon-sync', 'extension.openVstsBuildSelection');
     }
 
     public displayError(text: string, tooltip: string): void {
-        this.displayStatusBarItem(text, tooltip, 'octicon-alert', 'extension.openVstsBuildStatus');
+        this.displayStatusBarItem(text, tooltip, 'octicon-alert', 'extension.openVstsBuildSelection');
     }
 
     public displayInformation(text: string, tooltip: string): void {
-        this.displayStatusBarItem(text, tooltip, '', 'extension.openVstsBuildStatus');
+        this.displayStatusBarItem(text, tooltip, '', 'extension.openVstsBuildSelection');
     }
 
     public displayNoBuilds(text: string, tooltip: string): void {
-        this.displayStatusBarItem(text, tooltip, 'octicon-clock', 'extension.openVstsBuildStatus');
+        this.displayStatusBarItem(text, tooltip, 'octicon-clock', 'extension.openVstsBuildSelection');
     }
 
     public displayConnectivityError(text: string, tooltip: string): void {
-        this.displayStatusBarItem(text, tooltip, 'octicon-zap', 'extension.openVstsBuildStatus');
+        this.displayStatusBarItem(text, tooltip, 'octicon-zap', 'extension.openVstsBuildSelection');
     }
     
     public hideStatusBarItem() {
