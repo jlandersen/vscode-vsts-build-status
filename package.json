@@ -1,0 +1,66 @@
+{
+    "name": "vstsbuildstatus",
+    "displayName": "Visual Studio Team Services Build Status",
+    "description": "Monitor Visual Studio Team Services builds in the status bar",
+    "version": "0.1.0",
+    "publisher": "jeppeandersen",
+    "galleryBanner": {
+		"color": "#5c2d91",
+		"theme": "dark"
+	},
+    "engines": {
+        "vscode": "^0.10.1"
+    },
+    "categories": [
+        "Other"
+    ],
+    "activationEvents": [
+        "*"
+    ],
+    "main": "./out/src/extension",
+    "scripts": {
+        "vscode:prepublish": "node ./node_modules/vscode/bin/compile",
+        "compile": "node ./node_modules/vscode/bin/compile -watch -p ./"
+    },
+    "dependencies": {
+        "node-rest-client": "^1.5.1"
+    },
+    "devDependencies": {
+        "typescript": "^1.7.5",
+        "vscode": "0.10.x"
+    },
+    "contributes": {
+        "configuration": {
+            "type": "object",
+            "title": "VSTS Build Status Configuration",
+            "properties": {
+                "vsts.account": {
+                    "type": "string",
+                    "default": "",
+                    "description": "Specifies your Visual Studio Team Services account name ([account].visualstudio.com)."
+                },
+                "vsts.username": {
+                    "type": "string",
+                    "default": "",
+                    "description": "Specifies a username to use for accessing VSTS Build information on the account. Not needed if you use a personal acceess token."
+                },
+                "vsts.password": {
+                    "type": "string",
+                    "default": "",
+                    "description": "Specifies the password or Personal Access Token to use for accessing VSTS Build information on the account."
+                },
+                "vsts.project": {
+                    "type": "string",
+                    "default": "",
+                    "description": "Specifies the VSTS project to look for builds in."
+                }
+            }
+        },
+        "commands": [
+            {
+                "command": "extension.openVstsBuildSelection",
+                "title": " VSTS Build Status: Select Build Definition"
+            }
+        ]
+    }
+}
