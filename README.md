@@ -9,7 +9,7 @@ The status bar icon will become visible when the necessary settings are provided
 A selected build definition in a specific workspace will be selected automatically the next time you open that workspace.
 
 ## Configuration
-The extension is enabled by providing the following settings:
+The extension is enabled by providing the following settings (user or workspace):
 
 ```json
 {

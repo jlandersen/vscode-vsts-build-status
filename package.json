@@ -6,19 +6,23 @@
     "publisher": "jeppeandersen",
     "license": "MIT",
     "keywords": [
-      "Visual Studio Team Services",
-      "Build Status",
-      "CI"
+        "Visual Studio Team Services",
+        "Build Status",
+        "CI"
     ],
     "icon": "assets/icon.png",
     "bugs": {
         "url": "https://github.com/jlandersen/vscode-vsts-build-status/issues"
     },
     "homepage": "https://github.com/jlandersen/vscode-vsts-build-status/blob/master/README.md",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/jlandersen/vscode-vsts-build-status.git"
+    },
     "galleryBanner": {
-		"color": "#5c2d91",
-		"theme": "dark"
-	},
+        "color": "#5c2d91",
+        "theme": "dark"
+    },
     "engines": {
         "vscode": "^0.10.1"
     },
