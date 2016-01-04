@@ -1,7 +1,6 @@
 
-import {window, commands, Memento, workspace, extensions, WorkspaceConfiguration, WorkspaceEdit, QuickPickItem} from 'vscode';
+import {window, commands, Memento, workspace, extensions, WorkspaceConfiguration, WorkspaceEdit, QuickPickItem, StatusBarAlignment, StatusBarItem} from 'vscode';
 import {Settings} from './settings';
-import {VstsBuildStatusBar} from './vstsbuildstatusbar'
 import * as rest from 'node-rest-client';
 import fs = require('fs')
 
@@ -92,12 +91,66 @@ export class VstsBuildRestClientImplementation implements VstsBuildRestClient {
         this.errorHandler = handler;
      }
    
-    private getRequestArgs(): any {
+    private getRequestArgs(): { headers: { Authorization: string} } {
         var authHeader = `Basic ${new Buffer(`${this.settings.username}:${this.settings.password}`).toString("base64")}`;
 
         return {
-            headers: { "Authorization": authHeader }
+            headers: { Authorization: authHeader }
         }
+    }
+}
+
+export class VstsBuildStatusBar {
+    private statusBarItem: StatusBarItem;
+    
+    public displaySuccess(text: string, tooltip: string): void {
+        this.displayStatusBarItem(text, tooltip, 'octicon-check', 'extension.openVstsBuildSelection');
+    }
+
+    public displayLoading(text: string, tooltip: string): void {
+        this.displayStatusBarItem(text, tooltip, 'octicon-sync', 'extension.openVstsBuildSelection');
+    }
+
+    public displayError(text: string, tooltip: string): void {
+        this.displayStatusBarItem(text, tooltip, 'octicon-alert', 'extension.openVstsBuildSelection');
+    }
+
+    public displayInformation(text: string, tooltip: string): void {
+        this.displayStatusBarItem(text, tooltip, '', 'extension.openVstsBuildSelection');
+    }
+
+    public displayNoBuilds(text: string, tooltip: string): void {
+        this.displayStatusBarItem(text, tooltip, 'octicon-clock', 'extension.openVstsBuildSelection');
+    }
+
+    public displayConnectivityError(text: string, tooltip: string): void {
+        this.displayStatusBarItem(text, tooltip, 'octicon-zap', 'extension.openVstsBuildSelection');
+    }
+    
+    public hideStatusBarItem() {
+        if (this.statusBarItem) {
+            this.statusBarItem.hide();
+        }
+    }
+    
+    public dispose() {
+        this.statusBarItem.dispose();
+    }
+
+    private displayStatusBarItem(text: string, tooltip: string, icon: string, command: string) {
+        if (!this.statusBarItem) {
+            this.statusBarItem = window.createStatusBarItem(StatusBarAlignment.Left);
+        }
+
+        if (icon) {
+            this.statusBarItem.text = `VSTS Build: ${text} $(icon ${icon})`;
+        } else {
+            this.statusBarItem.text = `VSTS Build: ${text}`;
+        }
+
+        this.statusBarItem.tooltip = tooltip;
+        this.statusBarItem.command = command;
+        this.statusBarItem.show();
     }
 }
 
@@ -120,21 +173,21 @@ export class VstsBuildStatus {
             this.activeDefinition = definition;
         }
         
+        // If settings change, build status is start over again 
+        // resulting in new settings being loaded.
         workspace.onDidChangeConfiguration(e => {
-            this.startBuildService();
+            this.beginBuildStatusUpdates();
         });
 
-        this.startBuildService();
+        this.beginBuildStatusUpdates();
     }
 
-    private startBuildService() {
+    private beginBuildStatusUpdates() {
         this.tryCancelPeriodicStatusUpdate();
         this.settings = Settings.createFromWorkspaceConfiguration(workspace.getConfiguration("vsts"));
         this.restClient = this.restClientFactory.createBuildRestClient(this.settings);
         this.restClient.onError(error => {
-             window.showErrorMessage(`Unable to connect to the VSTS account ${this.settings.account}`);
-             this.statusBar.displayConnectivityError("Unable to connect", "There was a problem trying to connect to your VSTS account");
-             
+             this.showConnectionErrorMessage();
              this.tryCancelPeriodicStatusUpdate();
         });
         
@@ -142,6 +195,9 @@ export class VstsBuildStatus {
     }
 
     public updateStatus(): void {
+        // Updates the status bar item depending on the state. 
+        // If everything goes well, the method is called periodically.
+        
         if (!this.settings.isValid()) {
             this.tryCancelPeriodicStatusUpdate();
             this.statusBar.hideStatusBarItem();
@@ -157,21 +213,19 @@ export class VstsBuildStatus {
         
         this.restClient.getLatestBuild(this.activeDefinition, (response, statusCode) => {
             if (statusCode != 200) {
-                this.statusBar.displayConnectivityError("Unable to connect", "There was a problem trying to connect to your VSTS account");
-                window.showErrorMessage(`Unable to connect to the VSTS account ${this.settings.account}`);
-                
-                this.tryCancelPeriodicStatusUpdate
+                this.showConnectionErrorMessage();
+                this.tryCancelPeriodicStatusUpdate();
 
                 return;
             }
 
             if (response == null) {
-                this.statusBar.displayNoBuilds(this.activeDefinition.name, "No builds queued");
+                this.statusBar.displayNoBuilds(this.activeDefinition.name, "No builds found");
 
                 return;
             }
 
-            if (response) {
+            if (response.result) {
                 if (response.result == "succeeded") {
                     this.statusBar.displaySuccess(this.activeDefinition.name, 'Last build was completed successfully');
                 } else {
@@ -180,22 +234,20 @@ export class VstsBuildStatus {
             } else {
                 this.statusBar.displayLoading(this.activeDefinition.name, 'Build in progress...');
             }
-
+            
+            this.tryStartPeriodicStatusUpdate();
         });
-
-        this.tryStartPeriodicStatusUpdate();
     }
 
     public openBuildDefinitionSelection(): void {
         this.restClient.getBuildDefinitions((response, statusCode) => {
             if (statusCode != 200) {
-                this.statusBar.displayConnectivityError("Unable to connect", "There was a problem trying to connect to your VSTS account");
-                window.showErrorMessage(`Unable to connect to the VSTS account ${this.settings.account}`);
-
+                this.showConnectionErrorMessage();
+                
                 return;
             }
 
-            var items: BuildDefinitionQuickPickItem[] = response.map(function(definition) {
+            var buildDefinitions: BuildDefinitionQuickPickItem[] = response.map(function(definition) {
                 return {
                     label: definition.name,
                     description: `Revision ${definition.revision}`,
@@ -208,7 +260,7 @@ export class VstsBuildStatus {
                 placeHolder: "Select a build definition to monitor"
             }
 
-            window.showQuickPick(items, options).then(result => {
+            window.showQuickPick(buildDefinitions, options).then(result => {
                 if (result) {
                     this.activeDefinition = result.definition;
                     this.state.update("vsts.active.definition", this.activeDefinition);
@@ -224,6 +276,11 @@ export class VstsBuildStatus {
     
     public dispose() {
         this.statusBar.dispose();
+    }
+    
+    private showConnectionErrorMessage() {
+        this.statusBar.displayConnectivityError("Unable to connect", "There was a problem trying to connect to your VSTS account");
+        window.showErrorMessage(`Unable to connect to the VSTS account ${this.settings.account}`);
     }
 
     private tryStartPeriodicStatusUpdate() {
