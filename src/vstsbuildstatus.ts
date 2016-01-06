@@ -1,6 +1,7 @@
 
-import {window, commands, Memento, workspace, extensions, WorkspaceConfiguration, WorkspaceEdit, QuickPickItem, StatusBarAlignment, StatusBarItem} from 'vscode';
+import {window, commands, Memento, workspace, extensions, WorkspaceConfiguration, WorkspaceEdit, QuickPickItem } from 'vscode';
 import {Settings} from './settings';
+import {VstsBuildStatusBar} from './vstsbuildstatusbar'
 import * as rest from 'node-rest-client';
 import fs = require('fs')
 
@@ -10,7 +11,7 @@ interface BuildDefinition {
     revision: number;
 }
 
-interface BuildResult {
+interface Build {
     result: string;
     reason: string;
     startTime: string;
@@ -23,19 +24,19 @@ interface BuildDefinitionQuickPickItem {
     definition: BuildDefinition;
 }
 
-interface VstsRestClientFactory {
-    createBuildRestClient(settings: Settings): VstsBuildRestClient;
+interface VstsBuildRestClientFactory {
+    createClient(settings: Settings): VstsBuildRestClient;
 }
 
-export class VstsRestClientFactoryImplementation implements VstsRestClientFactory {
-    public createBuildRestClient(settings: Settings): VstsBuildRestClient {
+export class VstsBuildRestClientFactoryImpl implements VstsBuildRestClientFactory {
+    public createClient(settings: Settings): VstsBuildRestClient {
         return new VstsBuildRestClientImplementation(settings);
     }
 }
 
 interface VstsBuildRestClient {
-    getLatestBuild(definition: BuildDefinition, callback: ((response: BuildResult, statusCode: number) => any)): void;
-    getBuildDefinitions(callback: ((response: BuildDefinition[], statusCode) => any)): void;
+    getLatest(definition: BuildDefinition, callback: ((response: Build, statusCode: number) => any)): void;
+    getDefinitions(callback: ((response: BuildDefinition[], statusCode) => any)): void;
     onError(handler: (error: any) => any): void;
 }
 
@@ -49,12 +50,12 @@ export class VstsBuildRestClientImplementation implements VstsBuildRestClient {
         this.client = new rest.Client();
     }
 
-    public getLatestBuild(definition: BuildDefinition, success: ((response: BuildResult, statusCode: number) => any)): void {
+    public getLatest(definition: BuildDefinition, success: ((response: Build, statusCode: number) => any)): void {
         this.client.get(
             `https://${this.settings.account}.visualstudio.com/DefaultCollection/${this.settings.project}/_apis/build/builds?definitions=${definition.id}&$top=1&api-version=2.0`,
             this.getRequestArgs(),
             (data, response) => {
-                var result: BuildResult;
+                var result: Build;
 
                 try {
                     result = JSON.parse(data).value[0];
@@ -68,7 +69,7 @@ export class VstsBuildRestClientImplementation implements VstsBuildRestClient {
             });
     }
 
-    public getBuildDefinitions(success: ((response: BuildDefinition[], statusCode) => any)): void {
+    public getDefinitions(success: ((response: BuildDefinition[], statusCode) => any)): void {
         this.client.get(
             `https://${this.settings.account}.visualstudio.com/DefaultCollection/${this.settings.project}/_apis/build/definitions?api-version=2.0`,
             this.getRequestArgs(),
@@ -100,70 +101,16 @@ export class VstsBuildRestClientImplementation implements VstsBuildRestClient {
     }
 }
 
-export class VstsBuildStatusBar {
-    private statusBarItem: StatusBarItem;
-    
-    public displaySuccess(text: string, tooltip: string): void {
-        this.displayStatusBarItem(text, tooltip, 'octicon-check', 'extension.openVstsBuildSelection');
-    }
-
-    public displayLoading(text: string, tooltip: string): void {
-        this.displayStatusBarItem(text, tooltip, 'octicon-sync', 'extension.openVstsBuildSelection');
-    }
-
-    public displayError(text: string, tooltip: string): void {
-        this.displayStatusBarItem(text, tooltip, 'octicon-alert', 'extension.openVstsBuildSelection');
-    }
-
-    public displayInformation(text: string, tooltip: string): void {
-        this.displayStatusBarItem(text, tooltip, '', 'extension.openVstsBuildSelection');
-    }
-
-    public displayNoBuilds(text: string, tooltip: string): void {
-        this.displayStatusBarItem(text, tooltip, 'octicon-clock', 'extension.openVstsBuildSelection');
-    }
-
-    public displayConnectivityError(text: string, tooltip: string): void {
-        this.displayStatusBarItem(text, tooltip, 'octicon-zap', 'extension.openVstsBuildSelection');
-    }
-    
-    public hideStatusBarItem() {
-        if (this.statusBarItem) {
-            this.statusBarItem.hide();
-        }
-    }
-    
-    public dispose() {
-        this.statusBarItem.dispose();
-    }
-
-    private displayStatusBarItem(text: string, tooltip: string, icon: string, command: string) {
-        if (!this.statusBarItem) {
-            this.statusBarItem = window.createStatusBarItem(StatusBarAlignment.Left);
-        }
-
-        if (icon) {
-            this.statusBarItem.text = `VSTS Build: ${text} $(icon ${icon})`;
-        } else {
-            this.statusBarItem.text = `VSTS Build: ${text}`;
-        }
-
-        this.statusBarItem.tooltip = tooltip;
-        this.statusBarItem.command = command;
-        this.statusBarItem.show();
-    }
-}
-
 export class VstsBuildStatus {
     private statusBar: VstsBuildStatusBar;
     private activeDefinition: BuildDefinition;
     private settings: Settings;
     private intervalId: number;
     private restClient: VstsBuildRestClient;
-    private restClientFactory: VstsRestClientFactory;
+    private restClientFactory: VstsBuildRestClientFactory;
     private state: Memento;
 
-    constructor(restClientFactory: VstsRestClientFactory, state: Memento) {
+    constructor(restClientFactory: VstsBuildRestClientFactory, state: Memento) {
         this.statusBar = new VstsBuildStatusBar();
         this.restClientFactory = restClientFactory;
         this.state = state;
@@ -185,7 +132,7 @@ export class VstsBuildStatus {
     private beginBuildStatusUpdates() {
         this.tryCancelPeriodicStatusUpdate();
         this.settings = Settings.createFromWorkspaceConfiguration(workspace.getConfiguration("vsts"));
-        this.restClient = this.restClientFactory.createBuildRestClient(this.settings);
+        this.restClient = this.restClientFactory.createClient(this.settings);
         this.restClient.onError(error => {
              this.showConnectionErrorMessage();
              this.tryCancelPeriodicStatusUpdate();
@@ -195,7 +142,7 @@ export class VstsBuildStatus {
     }
 
     public updateStatus(): void {
-        // Updates the status bar item depending on the state. 
+        // Updates the status bar depending on the state. 
         // If everything goes well, the method is called periodically.
         
         if (!this.settings.isValid()) {
@@ -211,7 +158,7 @@ export class VstsBuildStatus {
             return;
         }
         
-        this.restClient.getLatestBuild(this.activeDefinition, (response, statusCode) => {
+        this.restClient.getLatest(this.activeDefinition, (response, statusCode) => {
             if (statusCode != 200) {
                 this.showConnectionErrorMessage();
                 this.tryCancelPeriodicStatusUpdate();
@@ -240,7 +187,7 @@ export class VstsBuildStatus {
     }
 
     public openBuildDefinitionSelection(): void {
-        this.restClient.getBuildDefinitions((response, statusCode) => {
+        this.restClient.getDefinitions((response, statusCode) => {
             if (statusCode != 200) {
                 this.showConnectionErrorMessage();
                 
@@ -264,9 +211,6 @@ export class VstsBuildStatus {
                 if (result) {
                     this.activeDefinition = result.definition;
                     this.state.update("vsts.active.definition", this.activeDefinition);
-
-                    console.log('selected ' + this.activeDefinition);
-
                     this.updateStatus();
                 }
 
