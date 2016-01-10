@@ -1,5 +1,8 @@
+"use strict";
+
 import * as vscode from 'vscode';
-import {VstsBuildStatus, VstsBuildRestClientFactoryImpl} from './vstsbuildstatus'
+import {VstsBuildStatus} from './vstsbuildstatus'
+import {VstsBuildRestClientFactoryImpl} from './vstsbuildrestclient'
 
 export function activate(context: vscode.ExtensionContext) {
     var buildServiceStatus = new VstsBuildStatus(new VstsBuildRestClientFactoryImpl(), context.workspaceState);
