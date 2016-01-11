@@ -1,4 +1,4 @@
-import {window, StatusBarItem, StatusBarAlignment} from 'vscode'
+import {window, StatusBarItem, StatusBarAlignment, Disposable} from 'vscode'
 
 export class VstsBuildStatusBar {
     private statusBarItem: StatusBarItem;

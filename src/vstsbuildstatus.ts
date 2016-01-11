@@ -1,4 +1,4 @@
-import {window, commands, Memento, workspace, extensions, WorkspaceConfiguration, WorkspaceEdit, QuickPickItem } from 'vscode';
+import {window, QuickPickItem } from 'vscode';
 import fs = require('fs');
 import {Settings} from './settings';
 import {VstsBuildStatusBar} from './vstsbuildstatusbar';
@@ -18,33 +18,22 @@ export class VstsBuildStatus {
     private settings: Settings;
     private intervalId: number;
     private restClient: VstsBuildRestClient;
-    private restClientFactory: VstsBuildRestClientFactory;
-    private state: Memento;
-
-    constructor(restClientFactory: VstsBuildRestClientFactory, state: Memento) {
+    
+    constructor(settings: Settings, restClientFactory: VstsBuildRestClientFactory) {
+        this.settings = settings;
         this.statusBar = new VstsBuildStatusBar();
-        this.restClientFactory = restClientFactory;
-        this.state = state;
-
-        var definition = state.get<BuildDefinition>("vsts.active.definition");
-        if (definition) {
-            this.activeDefinition = definition;
-        }
+        this.restClient = restClientFactory.createClient(settings);
+        this.activeDefinition = settings.activeBuildDefinition;
         
-        // If settings change, build status is start over again 
-        // resulting in new settings being loaded.
-        workspace.onDidChangeConfiguration(e => {
+        this.settings.onDidChangeSettings = () => {
             this.beginBuildStatusUpdates();
-        });
+        };
 
         this.beginBuildStatusUpdates();
     }
 
     private beginBuildStatusUpdates() {
         this.tryCancelPeriodicStatusUpdate();
-        this.settings = Settings.createFromWorkspaceConfiguration(workspace.getConfiguration("vsts"));
-        this.restClient = this.restClientFactory.createClient(this.settings);
-
         this.updateStatus();
     }
 
@@ -107,7 +96,7 @@ export class VstsBuildStatus {
             window.showQuickPick(buildDefinitions, options).then(result => {
                 if (result) {
                     this.activeDefinition = result.definition;
-                    this.state.update("vsts.active.definition", this.activeDefinition);
+                    this.settings.activeBuildDefinition = this.activeDefinition;
                     this.updateStatus();
                 }
             });
@@ -118,6 +107,7 @@ export class VstsBuildStatus {
 
     public dispose() {
         this.statusBar.dispose();
+        this.settings.dispose();
     }
 
     private handleError(): void {

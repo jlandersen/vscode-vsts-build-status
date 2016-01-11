@@ -1,32 +1,73 @@
-import {workspace, WorkspaceConfiguration} from 'vscode'
-import fs = require('fs')
+import {workspace, WorkspaceConfiguration, Memento, Disposable} from 'vscode'
+import {BuildDefinition} from './vstsbuildrestclient'
 
-export class Settings {
+export interface Settings {
+    account: string;
+    username: string;
+    password: string;
+    project: string;
+    activeBuildDefinition: BuildDefinition;
+    onDidChangeSettings(handler: () => void): void;
+    
+    dispose(): void;
+    isValid(): boolean;
+}
+
+export class WorkspaceVstsSettings implements Settings {
     account: string;
     username: string;
     password: string;
     project: string;
     
-    constructor(account: string, username: string, password: string, project: string) {
-        this.account = account;
-        this.username = username;
-        this.password = password;
-        this.project = project;
+    private _activeBuildDefinition: BuildDefinition;
+    private activeBuildDefinitionStateKey: string = "vsts.active.definition";
+    private state: Memento;
+    private workspaceSettingsChangedDisposable: Disposable;
+    private onDidChangeSettingsHandler: () => any;
+    
+    constructor(state: Memento) {
+        this.state = state;
+        
+        var definition = state.get<BuildDefinition>(this.activeBuildDefinitionStateKey);
+        if (definition) {
+            this.activeBuildDefinition = definition;
+        }
+        
+        this.workspaceSettingsChangedDisposable = workspace.onDidChangeConfiguration(() => {
+            this.reload();
+            
+            if (this.onDidChangeSettingsHandler) {
+                this.onDidChangeSettingsHandler();
+            } 
+        });
+               
+        this.reload();
     }
     
-    public static createFromWorkspaceConfiguration(configuration: WorkspaceConfiguration) {
-        return new Settings(
-            configuration.get<string>("account").trim(), 
-            configuration.get<string>("username").trim(),
-            configuration.get<string>("password").trim(),
-            configuration.get<string>("project").trim());
+    get activeBuildDefinition(): BuildDefinition {
+        return this._activeBuildDefinition;
     }
     
-    public isValid() {
+    set activeBuildDefinition(definition: BuildDefinition) {
+        this._activeBuildDefinition = definition;
+        this.state.update(this.activeBuildDefinitionStateKey, definition);
+    }
+    
+    public onDidChangeSettings(handler: () => any): void {
+        this.onDidChangeSettingsHandler = handler;
+    }
+   
+    public isValid(): boolean {
         return this.isAccountProvided() && this.isCredentialsProvided() && this.isProjectSpecified();
     }
     
-    public isAccountProvided(): boolean {
+    public dispose(): void {
+        if (this.workspaceSettingsChangedDisposable) {
+            this.workspaceSettingsChangedDisposable.dispose();
+        }   
+    }
+    
+    private isAccountProvided(): boolean {
         if (this.account) {
             return true;
         }
@@ -34,7 +75,7 @@ export class Settings {
         return false;
     }
     
-    public isCredentialsProvided(): boolean {
+    private isCredentialsProvided(): boolean {
         if (this.password) {
             return true;
         }
@@ -42,11 +83,20 @@ export class Settings {
         return false;
     }
     
-    public isProjectSpecified(): boolean {
+    private isProjectSpecified(): boolean {
         if (this.project) {
             return true;
         }
         
         return false;                
+    }
+    
+    private reload() {
+        var configuration = workspace.getConfiguration("vsts");
+                   
+        this.account = configuration.get<string>("account").trim();
+        this.username = configuration.get<string>("username").trim();
+        this.password = configuration.get<string>("password").trim(),
+        this.project = configuration.get<string>("project").trim();
     }
 }
