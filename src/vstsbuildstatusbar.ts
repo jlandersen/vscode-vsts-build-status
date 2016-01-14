@@ -1,38 +1,38 @@
-import {window, StatusBarItem, StatusBarAlignment, Disposable} from 'vscode'
+import {window, StatusBarItem, StatusBarAlignment, Disposable} from "vscode"
 
 export class VstsBuildStatusBar {
     private statusBarItem: StatusBarItem;
-    
+
     public displaySuccess(text: string, tooltip: string): void {
-        this.displayStatusBarItem(text, tooltip, 'octicon-check', 'extension.openVstsBuildSelection');
+        this.displayStatusBarItem(text, tooltip, "octicon-check", "extension.openVstsBuildDefinitionSelection");
     }
 
     public displayLoading(text: string, tooltip: string): void {
-        this.displayStatusBarItem(text, tooltip, 'octicon-sync', 'extension.openVstsBuildSelection');
+        this.displayStatusBarItem(text, tooltip, "octicon-sync", "extension.openVstsBuildDefinitionSelection");
     }
 
     public displayError(text: string, tooltip: string): void {
-        this.displayStatusBarItem(text, tooltip, 'octicon-alert', 'extension.openVstsBuildSelection');
+        this.displayStatusBarItem(text, tooltip, "octicon-alert", "extension.openVstsBuildDefinitionSelection");
     }
 
     public displayInformation(text: string, tooltip: string): void {
-        this.displayStatusBarItem(text, tooltip, '', 'extension.openVstsBuildSelection');
+        this.displayStatusBarItem(text, tooltip, "", "extension.openVstsBuildSelection");
     }
 
     public displayNoBuilds(text: string, tooltip: string): void {
-        this.displayStatusBarItem(text, tooltip, 'octicon-clock', 'extension.openVstsBuildSelection');
+        this.displayStatusBarItem(text, tooltip, "octicon-clock", "extension.openVstsBuildDefinitionSelection");
     }
 
     public displayConnectivityError(text: string, tooltip: string): void {
-        this.displayStatusBarItem(text, tooltip, 'octicon-zap', 'extension.openVstsBuildSelection');
+        this.displayStatusBarItem(text, tooltip, "octicon-zap", "extension.openVstsBuildDefinitionSelection");
     }
-    
+
     public hideStatusBarItem() {
         if (this.statusBarItem) {
             this.statusBarItem.hide();
         }
     }
-    
+
     public dispose() {
         this.statusBarItem.dispose();
     }

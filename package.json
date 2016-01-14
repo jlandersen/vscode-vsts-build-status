@@ -2,7 +2,7 @@
     "name": "vstsbuildstatus",
     "displayName": "Visual Studio Team Services Build Status",
     "description": "Monitor Visual Studio Team Services builds in the status bar",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "publisher": "jeppeandersen",
     "license": "MIT",
     "keywords": [
@@ -73,8 +73,12 @@
         },
         "commands": [
             {
-                "command": "extension.openVstsBuildSelection",
+                "command": "extension.openVstsBuildDefinitionSelection",
                 "title": " VSTS Build Status: Select Build Definition"
+            },
+            {
+                "command": "extension.openVstsBuildLogSelection",
+                "title": " VSTS Build Status: View Build Log"
             }
         ]
     }

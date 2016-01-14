@@ -1,8 +1,10 @@
-import {window, QuickPickItem } from 'vscode';
-import fs = require('fs');
-import {Settings} from './settings';
-import {VstsBuildStatusBar} from './vstsbuildstatusbar';
-import {Build, BuildDefinition, VstsBuildRestClient, VstsBuildRestClientFactory} from './vstsbuildrestclient';
+"use strict";
+
+import {window, QuickPickItem } from "vscode";
+import fs = require("fs");
+import {Settings} from "./settings";
+import {VstsBuildStatusBar} from "./vstsbuildstatusbar";
+import {Build, BuildDefinition, VstsBuildRestClient, VstsBuildRestClientFactory} from "./vstsbuildrestclient";
 
 interface BuildDefinitionQuickPickItem {
     id: number;
@@ -18,13 +20,13 @@ export class VstsBuildStatus {
     private settings: Settings;
     private intervalId: number;
     private restClient: VstsBuildRestClient;
-    
+
     constructor(settings: Settings, restClientFactory: VstsBuildRestClientFactory) {
         this.settings = settings;
         this.statusBar = new VstsBuildStatusBar();
         this.restClient = restClientFactory.createClient(settings);
         this.activeDefinition = settings.activeBuildDefinition;
-        
+
         this.settings.onDidChangeSettings = () => {
             this.beginBuildStatusUpdates();
         };
@@ -40,7 +42,7 @@ export class VstsBuildStatus {
     public updateStatus() {
         // Updates the status bar depending on the state. 
         // If everything goes well, the method is set up to be called periodically.
-        
+
         if (!this.settings.isValid()) {
             this.tryCancelPeriodicStatusUpdate();
             this.statusBar.hideStatusBarItem();
@@ -56,19 +58,17 @@ export class VstsBuildStatus {
 
         this.restClient.getLatest(this.activeDefinition).then(
             response => {
-                if (response.value == null) {
+                if (!response.value) {
                     this.statusBar.displayNoBuilds(this.activeDefinition.name, "No builds found");
-
-                    return;
                 }
 
-                if (response.value.result) {
-                    if (response.value.result == "succeeded") {
+                if (response.value && response.value.result) {
+                    if (response.value.result === "succeeded") {
                         this.statusBar.displaySuccess(this.activeDefinition.name, "Last build was completed successfully");
                     } else {
                         this.statusBar.displayError(this.activeDefinition.name, "Last build failed");
                     }
-                } else {
+                } else if (response.value) {
                     this.statusBar.displayLoading(this.activeDefinition.name, "Build in progress...");
                 }
 
@@ -79,35 +79,52 @@ export class VstsBuildStatus {
     }
 
     public openBuildDefinitionSelection(): void {
-        this.restClient.getDefinitions().then(response => {
-            var buildDefinitions: BuildDefinitionQuickPickItem[] = response.value.map(function(definition) {
-                return {
-                    label: definition.name,
-                    description: `Revision ${definition.revision}`,
-                    id: definition.id,
-                    definition: definition
-                }
-            });
-
-            var options = {
-                placeHolder: "Select a build definition to monitor"
+        this.getBuildDefinitionByQuickPick("Select a build definition to monitor").then(result => {
+            if (result) {
+                this.activeDefinition = result;
+                this.settings.activeBuildDefinition = this.activeDefinition;
+                this.updateStatus();
             }
-
-            window.showQuickPick(buildDefinitions, options).then(result => {
-                if (result) {
-                    this.activeDefinition = result.definition;
-                    this.settings.activeBuildDefinition = this.activeDefinition;
-                    this.updateStatus();
-                }
-            });
         }, error => {
             this.handleError();
-        })
+        });
     }
 
-    public dispose() {
-        this.statusBar.dispose();
-        this.settings.dispose();
+    public openBuildLogSelection(): void {
+        this.getBuildDefinitionByQuickPick("Select a build definition").then(result => {
+            if (!result) {
+                return;
+            }
+        });
+    }
+
+    private getBuildDefinitionByQuickPick(placeHolder: string): Thenable<BuildDefinition> {
+        return new Promise((resolve, reject) => {
+            this.restClient.getDefinitions().then(response => {
+                let buildDefinitions: BuildDefinitionQuickPickItem[] = response.value.map(function(definition) {
+                    return {
+                        label: definition.name,
+                        description: `Revision ${definition.revision}`,
+                        id: definition.id,
+                        definition: definition
+                    }
+                });
+
+                let options = {
+                    placeHolder: placeHolder
+                };
+
+                window.showQuickPick(buildDefinitions, options).then(result => {
+                    if (result) {
+                        resolve(result.definition);
+                    } else {
+                        resolve(null);
+                    }
+                });
+            }, error => {
+                reject(error);
+            });
+        });
     }
 
     private handleError(): void {
@@ -132,4 +149,10 @@ export class VstsBuildStatus {
             this.intervalId = null;
         }
     }
+
+    public dispose() {
+        this.statusBar.dispose();
+        this.settings.dispose();
+    }
+
 }

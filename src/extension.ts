@@ -9,5 +9,8 @@ export function activate(context: vscode.ExtensionContext) {
     var buildServiceStatus = new VstsBuildStatus(new WorkspaceVstsSettings(context.workspaceState), new VstsBuildRestClientFactoryImpl());
     
     context.subscriptions.push(
-        vscode.commands.registerCommand('extension.openVstsBuildSelection', () => buildServiceStatus.openBuildDefinitionSelection()));
+        vscode.commands.registerCommand('extension.openVstsBuildDefinitionSelection', () => buildServiceStatus.openBuildDefinitionSelection()));
+    
+    context.subscriptions.push(
+        vscode.commands.registerCommand('extension.openVstsBuildLogSelection', () => buildServiceStatus.openBuildLogSelection()));
 }   

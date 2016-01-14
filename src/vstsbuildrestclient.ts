@@ -1,15 +1,23 @@
-import {Settings} from './settings';
-import * as rest from 'node-rest-client';
+"use static";
+
+import {Settings} from "./settings";
+import * as rest from "node-rest-client";
 
 export interface Build {
     result: string;
     reason: string;
     startTime: string;
 }
+
 export interface BuildDefinition {
     id: number;
     name: string;
     revision: number;
+}
+
+export interface BuildLog {
+    buildId: number;
+    messages: string[];
 }
 
 export class HttpResponse<T> {
@@ -28,16 +36,19 @@ export interface VstsBuildRestClientFactory {
 
 export class VstsBuildRestClientFactoryImpl implements VstsBuildRestClientFactory {
     public createClient(settings: Settings): VstsBuildRestClient {
-        return new VstsBuildRestClientImplementation(settings);
+        return new VstsBuildRestClientImpl(settings);
     }
 }
 
 export interface VstsBuildRestClient {
     getLatest(definition: BuildDefinition): Thenable<HttpResponse<Build>>;
+    getBuilds(definition: BuildDefinition, take: number): Thenable<HttpResponse<Build[]>>;
+    getLog(build: Build): Thenable<HttpResponse<string>>;
     getDefinitions(): Thenable<HttpResponse<BuildDefinition[]>>;
 }
 
-class VstsBuildRestClientImplementation implements VstsBuildRestClient {
+class VstsBuildRestClientImpl implements VstsBuildRestClient {
+    private static emptyHttpResponse = new HttpResponse(200, null);
     private client: any;
     private settings: Settings;
 
@@ -47,20 +58,34 @@ class VstsBuildRestClientImplementation implements VstsBuildRestClient {
     }
 
     public getLatest(definition: BuildDefinition): Thenable<HttpResponse<Build>> {
-        var url = `https://${this.settings.account}.visualstudio.com/DefaultCollection/${this.settings.project}/_apis/build/builds?definitions=${definition.id}&$top=1&api-version=2.0`;
-        
-        return this.get<Build[]>(url).then(response => {
-            if (response.value != null && response.value.length > 0) {
-                return new HttpResponse(response.statusCode, response.value[0]);
+        return this.getBuilds(definition, 1).then(result => {
+            if (result.value.length > 0) {
+                return new HttpResponse(200, result.value[0]);
             }
-            
-            return new HttpResponse(response.statusCode, null);
+
+            return VstsBuildRestClientImpl.emptyHttpResponse;
         });
     }
 
+    public getBuilds(definition: BuildDefinition, take: number = 5): Thenable<HttpResponse<Build[]>> {
+        let url = `https://${this.settings.account}.visualstudio.com/DefaultCollection/${this.settings.project}/_apis/build/builds?definitions=${definition.id}&$top=${take}&api-version=2.0`;
+
+        return this.get<Build[]>(url).then(response => {
+            if (response.value && response.value.length > 0) {
+                return new HttpResponse(response.statusCode, response.value);
+            }
+
+            return new HttpResponse(response.statusCode, []);
+        });
+    }
+
+    public getLog(build: Build): Thenable<HttpResponse<string>> {
+        return null;
+    }
+
     public getDefinitions(): Thenable<HttpResponse<BuildDefinition[]>> {
-        var url = `https://${this.settings.account}.visualstudio.com/DefaultCollection/${this.settings.project}/_apis/build/definitions?api-version=2.0`;
-        
+        let url = `https://${this.settings.account}.visualstudio.com/DefaultCollection/${this.settings.project}/_apis/build/definitions?api-version=2.0`;
+
         return this.get<BuildDefinition[]>(url);
     }
 
@@ -70,12 +95,12 @@ class VstsBuildRestClientImplementation implements VstsBuildRestClient {
                 url,
                 this.getRequestArgs(),
                 (data, response) => {
-                    if (response.statusCode != 200) {
+                    if (response.statusCode !== 200) {
                         reject("Status code indicated non-OK result " + response.statusCode);
                         return;
                     }
 
-                    var result: T;
+                    let result: T;
 
                     try {
                         result = JSON.parse(data).value;
@@ -91,7 +116,7 @@ class VstsBuildRestClientImplementation implements VstsBuildRestClient {
     }
 
     private getRequestArgs(): { headers: { Authorization: string } } {
-        var authHeader = `Basic ${new Buffer(`${this.settings.username}:${this.settings.password}`).toString("base64")}`;
+        let authHeader = `Basic ${new Buffer(`${this.settings.username}:${this.settings.password}`).toString("base64")}`;
 
         return {
             headers: { Authorization: authHeader }
