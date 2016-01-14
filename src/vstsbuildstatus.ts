@@ -1,6 +1,6 @@
 "use strict";
 
-import {window, QuickPickItem } from "vscode";
+import {window, OutputChannel, QuickPickItem } from "vscode";
 import fs = require("fs");
 import {Settings} from "./settings";
 import {VstsBuildStatusBar} from "./vstsbuildstatusbar";
@@ -13,13 +13,22 @@ interface BuildDefinitionQuickPickItem {
     definition: BuildDefinition;
 }
 
+interface BuildQuickPickItem {
+    id: number;
+    label: string;
+    description: string;
+    build: Build;
+}
+
 export class VstsBuildStatus {
     private updateIntervalInSeconds = 15;
     private statusBar: VstsBuildStatusBar;
+    private outputChannel: OutputChannel;
     private activeDefinition: BuildDefinition;
     private settings: Settings;
     private intervalId: number;
     private restClient: VstsBuildRestClient;
+
 
     constructor(settings: Settings, restClientFactory: VstsBuildRestClientFactory) {
         this.settings = settings;
@@ -95,6 +104,29 @@ export class VstsBuildStatus {
             if (!result) {
                 return;
             }
+
+            return this.getBuildByQuickPick(result, "Select a build to view");
+        }).then(build => {
+            if (!build) {
+                return;
+            }
+
+            return this.restClient.getLog(build);
+        }).then(log => {
+            if (!log) {
+                return;
+            }
+
+            if (!this.outputChannel) {
+                this.outputChannel = window.createOutputChannel("VSTS Build Log");
+            }
+
+            this.outputChannel.clear();
+            this.outputChannel.show();
+
+            log.value.messages.forEach(element => {
+                this.outputChannel.appendLine(element);
+            });
         });
     }
 
@@ -127,6 +159,31 @@ export class VstsBuildStatus {
         });
     }
 
+    private getBuildByQuickPick(definition: BuildDefinition, placeHolder: string): Thenable<Build> {
+        return this.restClient.getBuilds(definition, 10).then(builds => {
+            let buildQuickPickItems: BuildQuickPickItem[] = builds.value.map(build => {
+                return {
+                    label: new Date(build.startTime).toLocaleString(),
+                    description: build.result,
+                    id: build.id,
+                    build: build
+                };
+            });
+
+            let options = {
+                placeHolder: placeHolder
+            };
+
+            return window.showQuickPick(buildQuickPickItems, options).then(result => {
+                if (result) {
+                    return result.build;
+                } else {
+                    return null;
+                }
+            });
+        });
+    }
+
     private handleError(): void {
         this.showConnectionErrorMessage();
         this.tryCancelPeriodicStatusUpdate();
@@ -153,6 +210,10 @@ export class VstsBuildStatus {
     public dispose() {
         this.statusBar.dispose();
         this.settings.dispose();
+
+        if (this.outputChannel) {
+            this.outputChannel.dispose();
+        }
     }
 
 }

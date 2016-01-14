@@ -1,3 +1,5 @@
+"use strict";
+
 import {window, StatusBarItem, StatusBarAlignment, Disposable} from "vscode"
 
 export class VstsBuildStatusBar {

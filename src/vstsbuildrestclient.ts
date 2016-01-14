@@ -1,9 +1,10 @@
-"use static";
+"use strict";
 
 import {Settings} from "./settings";
 import * as rest from "node-rest-client";
 
 export interface Build {
+    id: number;
     result: string;
     reason: string;
     startTime: string;
@@ -18,6 +19,11 @@ export interface BuildDefinition {
 export interface BuildLog {
     buildId: number;
     messages: string[];
+}
+
+interface BuildLogContainer {
+    id: number;
+    lineCount: number;
 }
 
 export class HttpResponse<T> {
@@ -43,7 +49,7 @@ export class VstsBuildRestClientFactoryImpl implements VstsBuildRestClientFactor
 export interface VstsBuildRestClient {
     getLatest(definition: BuildDefinition): Thenable<HttpResponse<Build>>;
     getBuilds(definition: BuildDefinition, take: number): Thenable<HttpResponse<Build[]>>;
-    getLog(build: Build): Thenable<HttpResponse<string>>;
+    getLog(build: Build): Thenable<HttpResponse<BuildLog>>;
     getDefinitions(): Thenable<HttpResponse<BuildDefinition[]>>;
 }
 
@@ -79,8 +85,27 @@ class VstsBuildRestClientImpl implements VstsBuildRestClient {
         });
     }
 
-    public getLog(build: Build): Thenable<HttpResponse<string>> {
-        return null;
+    public getLog(build: Build): Thenable<HttpResponse<BuildLog>> {
+        let url = `https://${this.settings.account}.visualstudio.com/DefaultCollection/${this.settings.project}/_apis/build/builds/${build.id}/logs?api-version=2.0`;
+        return this.get<BuildLogContainer[]>(url).then(result => {
+            return Promise.all(result.value.map(buildLogContainer => {
+                let singleLogUrl = `https://${this.settings.account}.visualstudio.com/DefaultCollection/${this.settings.project}/_apis/build/builds/${build.id}/logs/${buildLogContainer.id}?api-version=2.0`;;
+                return this.get<string[]>(singleLogUrl);
+            })).then(logs => {
+                let flattenedLogs: string[] = [];
+
+                for (var logSection of logs) {
+                    for (var logLine of logSection.value) {
+                        flattenedLogs.push(logLine);
+                    }
+                }
+
+                return new HttpResponse(200, {
+                    buildId: build.id,
+                    messages: flattenedLogs
+                });
+            });
+        });
     }
 
     public getDefinitions(): Thenable<HttpResponse<BuildDefinition[]>> {
