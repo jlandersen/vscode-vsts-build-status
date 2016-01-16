@@ -127,10 +127,18 @@ export class VstsBuildStatus {
             log.value.messages.forEach(element => {
                 this.outputChannel.appendLine(element);
             });
+        }, error => {
+            this.handleError();
         });
     }
 
     private getBuildDefinitionByQuickPick(placeHolder: string): Thenable<BuildDefinition> {
+        if (!this.settings.isValid()) {
+            this.showSettingsMissingWarningMessage();
+
+            return Promise.resolve(null);
+        }
+
         return new Promise((resolve, reject) => {
             this.restClient.getDefinitions().then(response => {
                 let buildDefinitions: BuildDefinitionQuickPickItem[] = response.value.map(function(definition) {
@@ -192,6 +200,10 @@ export class VstsBuildStatus {
     private showConnectionErrorMessage(): void {
         this.statusBar.displayConnectivityError("Unable to connect", "There was a problem trying to connect to your VSTS account");
         window.showErrorMessage(`Unable to connect to the VSTS account ${this.settings.account}`);
+    }
+
+    private showSettingsMissingWarningMessage() {
+        window.showErrorMessage("Account, project and password/PAT must be provided in user or workspace settings.")
     }
 
     private tryStartPeriodicStatusUpdate(): void {
