@@ -1,10 +1,10 @@
 "use strict";
 
 import {window, OutputChannel, QuickPickItem } from "vscode";
-import fs = require("fs");
 import {Settings} from "./settings";
 import {VstsBuildStatusBar} from "./vstsbuildstatusbar";
 import {Build, BuildDefinition, VstsBuildRestClient, VstsBuildRestClientFactory} from "./vstsbuildrestclient";
+import fs = require("fs");
 
 interface BuildDefinitionQuickPickItem {
     id: number;
@@ -134,7 +134,7 @@ export class VstsBuildStatus {
 
     private getBuildDefinitionByQuickPick(placeHolder: string): Thenable<BuildDefinition> {
         if (!this.settings.isValid()) {
-            this.showSettingsMissingWarningMessage();
+            this.showSettingsMissingMessage();
 
             return Promise.resolve(null);
         }
@@ -202,8 +202,8 @@ export class VstsBuildStatus {
         window.showErrorMessage(`Unable to connect to the VSTS account ${this.settings.account}`);
     }
 
-    private showSettingsMissingWarningMessage() {
-        window.showErrorMessage("Account, project and password/PAT must be provided in user or workspace settings.")
+    private showSettingsMissingMessage() {
+        window.showInformationMessage("Account, project and password/Personal Access Token must be provided in user or workspace settings.")
     }
 
     private tryStartPeriodicStatusUpdate(): void {
@@ -227,5 +227,5 @@ export class VstsBuildStatus {
             this.outputChannel.dispose();
         }
     }
-
+    
 }
