@@ -13,4 +13,7 @@ export function activate(context: vscode.ExtensionContext) {
     
     context.subscriptions.push(
         vscode.commands.registerCommand('extension.openVstsBuildLogSelection', () => buildServiceStatus.openBuildLogSelection()));
+        
+    context.subscriptions.push(
+        vscode.commands.registerCommand('extension.openVstsQueueBuildSelection', () => buildServiceStatus.openQueueBuildSelection()));
 }   

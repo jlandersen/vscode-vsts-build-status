@@ -26,6 +26,10 @@ interface BuildLogContainer {
     lineCount: number;
 }
 
+interface QueueBuildResult {
+    id: number;
+}
+
 export class HttpResponse<T> {
     statusCode: number;
     value: T;
@@ -51,6 +55,7 @@ export interface VstsBuildRestClient {
     getBuilds(definition: BuildDefinition, take: number): Thenable<HttpResponse<Build[]>>;
     getLog(build: Build): Thenable<HttpResponse<BuildLog>>;
     getDefinitions(): Thenable<HttpResponse<BuildDefinition[]>>;
+    queueBuild(definition: BuildDefinition): Thenable<HttpResponse<QueueBuildResult>>;
 }
 
 class VstsBuildRestClientImpl implements VstsBuildRestClient {
@@ -113,12 +118,24 @@ class VstsBuildRestClientImpl implements VstsBuildRestClient {
 
         return this.get<BuildDefinition[]>(url);
     }
+    
+    public queueBuild(definition: BuildDefinition): Thenable<HttpResponse<QueueBuildResult>> {
+        let url = `https://${this.settings.account}.visualstudio.com/DefaultCollection/${this.settings.project}/_apis/build/builds?api-version=2.0`;
+        
+        let body = {
+            definition: {
+                id: definition.id 
+            }
+        };
+        
+        return this.post<QueueBuildResult>(url, body);
+    }
 
     private get<T>(url: string): Thenable<HttpResponse<T>> {
         return new Promise((resolve, reject) => {
             this.client.get(
                 url,
-                this.getRequestArgs(),
+                { headers: { "Authorization": this.getAuthorizationHeaderValue() } },
                 (data, response) => {
                     if (response.statusCode !== 200) {
                         reject("Status code indicated non-OK result " + response.statusCode);
@@ -133,18 +150,36 @@ class VstsBuildRestClientImpl implements VstsBuildRestClient {
                         result = null;
                     }
 
-                    return resolve(new HttpResponse(response.statusCode, result));
+                    resolve(new HttpResponse(response.statusCode, result));
                 }).on("error", error => {
-                    return reject(error);
+                    reject(error);
                 });
         });
     }
+    
+    private post<T>(url: string, body: any): Thenable<HttpResponse<T>> {
+        var args = {
+            data: body,
+            headers: {
+                "Authorization": this.getAuthorizationHeaderValue(),
+                "Content-Type": "application/json"
+            }
+        };
+        
+        return new Promise((resolve, reject) => {
+            this.client.post(
+                url,
+                args,
+                (data, response) => {
+                    resolve();
+                }
+            ).on("error", error => {
+                reject(error);  
+            });
+        });
+    }
 
-    private getRequestArgs(): { headers: { Authorization: string } } {
-        let authHeader = `Basic ${new Buffer(`${this.settings.username}:${this.settings.password}`).toString("base64")}`;
-
-        return {
-            headers: { Authorization: authHeader }
-        }
+    private getAuthorizationHeaderValue(): string {
+        return `Basic ${new Buffer(`${this.settings.username}:${this.settings.password}`).toString("base64")}`;
     }
 }

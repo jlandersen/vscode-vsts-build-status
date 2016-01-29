@@ -45,7 +45,7 @@ export class WorkspaceVstsSettings implements Settings {
 
         this.reload();
     }
-
+    
     get activeBuildDefinition(): BuildDefinition {
         return this._activeBuildDefinition;
     }

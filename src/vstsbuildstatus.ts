@@ -134,7 +134,12 @@ export class VstsBuildStatus {
     
     public openQueueBuildSelection(): void {
         this.getBuildDefinitionByQuickPick("Select a build definition").then(result => {
+            if (!result) {
+                return;
+            }
             
+            return this.restClient.queueBuild(result);       
+        }).then(result => {
         }, error => {
             this.handleError();
         });

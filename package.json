@@ -74,7 +74,11 @@
         "commands": [
             {
                 "command": "extension.openVstsBuildDefinitionSelection",
-                "title": " VSTS Build Status: Select Build Definition"
+                "title": " VSTS Build Status: Select Build Definition to Monitor"
+            },
+            {
+                "command": "extension.openVstsQueueBuildSelection",
+                "title": " VSTS Build Status: Queue Build"
             },
             {
                 "command": "extension.openVstsBuildLogSelection",
