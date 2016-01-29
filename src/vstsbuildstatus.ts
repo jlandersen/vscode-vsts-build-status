@@ -36,9 +36,9 @@ export class VstsBuildStatus {
         this.restClient = restClientFactory.createClient(settings);
         this.activeDefinition = settings.activeBuildDefinition;
 
-        this.settings.onDidChangeSettings = () => {
+        this.settings.onDidChangeSettings(() => {
             this.beginBuildStatusUpdates();
-        };
+        });
 
         this.beginBuildStatusUpdates();
     }
@@ -48,7 +48,7 @@ export class VstsBuildStatus {
         this.updateStatus();
     }
 
-    public updateStatus() {
+    public updateStatus(): void {
         // Updates the status bar depending on the state. 
         // If everything goes well, the method is set up to be called periodically.
 
@@ -127,6 +127,14 @@ export class VstsBuildStatus {
             log.value.messages.forEach(element => {
                 this.outputChannel.appendLine(element);
             });
+        }, error => {
+            this.handleError();
+        });
+    }
+    
+    public openQueueBuildSelection(): void {
+        this.getBuildDefinitionByQuickPick("Select a build definition").then(result => {
+            
         }, error => {
             this.handleError();
         });

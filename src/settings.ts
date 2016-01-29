@@ -98,7 +98,7 @@ export class WorkspaceVstsSettings implements Settings {
 
         this.account = configuration.get<string>("account").trim();
         this.username = configuration.get<string>("username").trim();
-        this.password = configuration.get<string>("password").trim(),
-            this.project = configuration.get<string>("project").trim();
+        this.password = configuration.get<string>("password").trim();
+        this.project = configuration.get<string>("project").trim();
     }
 }
