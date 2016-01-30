@@ -184,7 +184,7 @@ export class VstsBuildStatus {
         return this.restClient.getBuilds(definition, 10).then(builds => {
             let buildQuickPickItems: BuildQuickPickItem[] = builds.value.map(build => {
                 return {
-                    label: new Date(build.startTime).toLocaleString(),
+                    label: new Date(build.queueTime).toLocaleString(),
                     description: build.result,
                     id: build.id,
                     build: build
