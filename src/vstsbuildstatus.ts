@@ -140,6 +140,7 @@ export class VstsBuildStatus {
             
             return this.restClient.queueBuild(result);       
         }).then(result => {
+            window.showInformationMessage(`Build has been queued for ${result.value.definition.name}`);
         }, error => {
             this.handleError();
         });

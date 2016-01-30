@@ -8,6 +8,7 @@ export interface Build {
     result: string;
     reason: string;
     startTime: string;
+    queueTime: string;
 }
 
 export interface BuildDefinition {
@@ -28,6 +29,7 @@ interface BuildLogContainer {
 
 interface QueueBuildResult {
     id: number;
+    definition: BuildDefinition;
 }
 
 export class HttpResponse<T> {
@@ -118,16 +120,16 @@ class VstsBuildRestClientImpl implements VstsBuildRestClient {
 
         return this.get<BuildDefinition[]>(url);
     }
-    
+
     public queueBuild(definition: BuildDefinition): Thenable<HttpResponse<QueueBuildResult>> {
         let url = `https://${this.settings.account}.visualstudio.com/DefaultCollection/${this.settings.project}/_apis/build/builds?api-version=2.0`;
-        
+
         let body = {
             definition: {
-                id: definition.id 
+                id: definition.id
             }
         };
-        
+
         return this.post<QueueBuildResult>(url, body);
     }
 
@@ -156,7 +158,7 @@ class VstsBuildRestClientImpl implements VstsBuildRestClient {
                 });
         });
     }
-    
+
     private post<T>(url: string, body: any): Thenable<HttpResponse<T>> {
         var args = {
             data: body,
@@ -165,16 +167,29 @@ class VstsBuildRestClientImpl implements VstsBuildRestClient {
                 "Content-Type": "application/json"
             }
         };
-        
+
         return new Promise((resolve, reject) => {
             this.client.post(
                 url,
                 args,
                 (data, response) => {
-                    resolve();
+                    if (response.statusCode !== 200) {
+                        reject("Status code indicated non-OK result " + response.statusCode);
+                        return;
+                    }
+
+                    let result: T;
+
+                    try {
+                        result = JSON.parse(data);
+                    } catch (e) {
+                        result = null;
+                    }
+
+                    resolve(new HttpResponse(response.statusCode, result));
                 }
             ).on("error", error => {
-                reject(error);  
+                reject(error);
             });
         });
     }
