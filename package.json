@@ -24,7 +24,7 @@
         "theme": "dark"
     },
     "engines": {
-        "vscode": "^0.10.1"
+        "vscode": "^0.10.6"
     },
     "categories": [
         "Other"
@@ -35,7 +35,8 @@
     "main": "./out/src/extension",
     "scripts": {
         "vscode:prepublish": "node ./node_modules/vscode/bin/compile",
-        "compile": "node ./node_modules/vscode/bin/compile -watch -p ./"
+        "compile": "node ./node_modules/vscode/bin/compile -watch -p ./",
+        "postinstall": "node ./node_modules/vscode/bin/install"
     },
     "dependencies": {
         "node-rest-client": "^1.8.0"
