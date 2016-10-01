@@ -2,7 +2,7 @@
     "name": "vstsbuildstatus",
     "displayName": "Visual Studio Team Services Build Status",
     "description": "Monitor Visual Studio Team Services builds in the status bar",
-    "version": "0.3.0",
+    "version": "0.4.0",
     "publisher": "jeppeandersen",
     "license": "MIT",
     "keywords": [
@@ -24,7 +24,7 @@
         "theme": "dark"
     },
     "engines": {
-        "vscode": "^0.10.6"
+        "vscode": "^1.5.0"
     },
     "categories": [
         "Other"
@@ -33,17 +33,21 @@
         "*"
     ],
     "main": "./out/src/extension",
+    "types": "./node-rest-client.d.ts",
     "scripts": {
-        "vscode:prepublish": "node ./node_modules/vscode/bin/compile",
-        "compile": "node ./node_modules/vscode/bin/compile -watch -p ./",
+        "vscode:prepublish": "tsc -p ./",
+        "compile": "tsc -watch -p ./",
         "postinstall": "node ./node_modules/vscode/bin/install"
     },
     "dependencies": {
-        "node-rest-client": "^1.8.0"
+        "node-rest-client": "^2.0.0"
     },
     "devDependencies": {
-        "typescript": "^1.7.5",
-        "vscode": "0.10.x"
+        "typescript": "^2.0.3",
+        "vscode": "^1.0.0",
+        "mocha": "^2.3.3",
+        "@types/node": "^6.0.40",
+        "@types/mocha": "^2.2.32"
     },
     "contributes": {
         "configuration": {

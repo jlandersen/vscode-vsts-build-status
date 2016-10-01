@@ -26,7 +26,7 @@ export class VstsBuildStatus {
     private outputChannel: OutputChannel;
     private activeDefinition: BuildDefinition;
     private settings: Settings;
-    private intervalId: number;
+    private intervalTimer: NodeJS.Timer;
     private restClient: VstsBuildRestClient;
 
 
@@ -221,15 +221,15 @@ export class VstsBuildStatus {
     }
 
     private tryStartPeriodicStatusUpdate(): void {
-        if (!this.intervalId) {
-            this.intervalId = setInterval(() => this.updateStatus(), this.updateIntervalInSeconds * 1000);
+        if (!this.intervalTimer) {
+            this.intervalTimer = setInterval(() => this.updateStatus(), this.updateIntervalInSeconds * 1000);
         }
     }
 
     private tryCancelPeriodicStatusUpdate(): void {
-        if (this.intervalId) {
-            clearInterval(this.intervalId);
-            this.intervalId = null;
+        if (this.intervalTimer) {
+            clearInterval(this.intervalTimer);
+            this.intervalTimer = null;
         }
     }
 

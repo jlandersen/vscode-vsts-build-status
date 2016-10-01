@@ -1,3 +1,1 @@
-declare module 'node-rest-client' {
-    var Client: any;
-}
+declare module 'node-rest-client';
