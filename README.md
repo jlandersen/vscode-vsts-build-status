@@ -4,6 +4,7 @@ Work with your Visual Studio Team Services builds directly in Visual Studio Code
 Features:
 - Select a build definition to monitor, and a status indicator will be visible in the status bar
 - View build logs
+- Open builds in browser
 - Queue new builds  
 
 ![Screenshot-1](assets/vscode-selection.png)
