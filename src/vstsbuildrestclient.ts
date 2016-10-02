@@ -9,6 +9,11 @@ export interface Build {
     reason: string;
     startTime: string;
     queueTime: string;
+    _links: {
+        web: {
+            href: string;
+        };
+    }
 }
 
 export interface BuildDefinition {

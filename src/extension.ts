@@ -12,6 +12,9 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand('extension.openVstsBuildDefinitionSelection', () => buildServiceStatus.openBuildDefinitionSelection()));
     
     context.subscriptions.push(
+        vscode.commands.registerCommand('extension.openVstsBuildWebSelection', () => buildServiceStatus.openBuildWebSelection()));
+
+    context.subscriptions.push(
         vscode.commands.registerCommand('extension.openVstsBuildLogSelection', () => buildServiceStatus.openBuildLogSelection()));
         
     context.subscriptions.push(

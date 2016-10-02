@@ -5,6 +5,7 @@ import {Settings} from "./settings";
 import {VstsBuildStatusBar} from "./vstsbuildstatusbar";
 import {Build, BuildDefinition, VstsBuildRestClient, VstsBuildRestClientFactory} from "./vstsbuildrestclient";
 import fs = require("fs");
+import openurl = require("openurl");
 
 interface BuildDefinitionQuickPickItem {
     id: number;
@@ -50,7 +51,7 @@ export class VstsBuildStatus {
 
     public updateStatus(): void {
         // Updates the status bar depending on the state. 
-        // If everything goes well, the method is set up to be called periodically.
+        // If everything goes well, the method ißs set up to be called periodically.
 
         if (!this.settings.isValid()) {
             this.tryCancelPeriodicStatusUpdate();
@@ -96,6 +97,22 @@ export class VstsBuildStatus {
             }
         }, error => {
             this.handleError();
+        });
+    }
+
+    public openBuildWebSelection(): void {
+        this.getBuildDefinitionByQuickPick("Select a build definition").then(result => {
+            if (!result) {
+                return;
+            }
+
+            return this.getBuildByQuickPick(result, "Select a build to open");
+        }).then(build => {
+            if (!build) {
+                return;
+            }
+
+            openurl.open(build._links.web.href);
         });
     }
 
