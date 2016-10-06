@@ -26,7 +26,13 @@ export class VstsBuildLogStreamHandler {
     }
 
     private getNext(buildId: number): void {
+        if (this.currentLogIndex === 0) {
+            this.outputChannel.appendLine("(VSTS Build Agent Status extension) Waiting for first logs...")
+        }
+
         this.restClient.getBuild(buildId).then(build => {
+            // Right now all logs are continuously fetched.
+            // This can be changed to only retrieve new logs from the API itself.
             this.restClient.getLog(build.value).then(log => {
                 if (!log) {
                     return;
@@ -35,14 +41,16 @@ export class VstsBuildLogStreamHandler {
                 var newLogEntries = log.value.messages.splice(this.currentLogIndex);
                 newLogEntries.forEach(element => {
                     this.outputChannel.appendLine(element);
-                    
                 });
+
                 this.currentLogIndex = this.currentLogIndex + newLogEntries.length;
 
                 if (build.value.status === "completed") {
                     clearInterval(this.intervalTimer);
                     this.intervalTimer = null;
                     this.currentLogIndex = 0;
+
+                    this.outputChannel.appendLine("(VSTS Build Agent Status extension) End of build log")
                 } else if (build.value.status !== "completed" && !this.intervalTimer) {
                     this.intervalTimer = setInterval(() => this.getNext(buildId), this.updateIntervalInSeconds * 1000);
                 }
