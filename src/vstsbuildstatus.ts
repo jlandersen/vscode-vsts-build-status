@@ -1,9 +1,10 @@
 "use strict";
 
-import {window, OutputChannel, QuickPickItem } from "vscode";
-import {Settings} from "./settings";
-import {VstsBuildStatusBar} from "./vstsbuildstatusbar";
-import {Build, BuildDefinition, VstsBuildRestClient, VstsBuildRestClientFactory} from "./vstsbuildrestclient";
+import { window, OutputChannel, QuickPickItem } from "vscode";
+import { Settings } from "./settings";
+import { VstsBuildStatusBar } from "./vstsbuildstatusbar";
+import { Build, BuildDefinition, VstsBuildRestClient, VstsBuildRestClientFactory } from "./vstsbuildrestclient";
+import { VstsBuildLogStreamHandler } from "./vstsbuildlog";
 import fs = require("fs");
 import openurl = require("openurl");
 
@@ -24,11 +25,12 @@ interface BuildQuickPickItem {
 export class VstsBuildStatus {
     private updateIntervalInSeconds = 15;
     private statusBar: VstsBuildStatusBar;
-    private outputChannel: OutputChannel;
+
     private activeDefinition: BuildDefinition;
     private settings: Settings;
     private intervalTimer: NodeJS.Timer;
     private restClient: VstsBuildRestClient;
+    private logStreamHandler: VstsBuildLogStreamHandler;
 
 
     constructor(settings: Settings, restClientFactory: VstsBuildRestClientFactory) {
@@ -36,6 +38,7 @@ export class VstsBuildStatus {
         this.statusBar = new VstsBuildStatusBar();
         this.restClient = restClientFactory.createClient(settings);
         this.activeDefinition = settings.activeBuildDefinition;
+        this.logStreamHandler = new VstsBuildLogStreamHandler(this.restClient);
 
         this.settings.onDidChangeSettings(() => {
             this.beginBuildStatusUpdates();
@@ -128,34 +131,19 @@ export class VstsBuildStatus {
                 return;
             }
 
-            return this.restClient.getLog(build);
-        }).then(log => {
-            if (!log) {
-                return;
-            }
-
-            if (!this.outputChannel) {
-                this.outputChannel = window.createOutputChannel("VSTS Build Log");
-            }
-
-            this.outputChannel.clear();
-            this.outputChannel.show();
-
-            log.value.messages.forEach(element => {
-                this.outputChannel.appendLine(element);
-            });
+            this.logStreamHandler.streamLogs(build);
         }, error => {
             this.handleError();
         });
     }
-    
+
     public openQueueBuildSelection(): void {
         this.getBuildDefinitionByQuickPick("Select a build definition").then(result => {
             if (!result) {
                 return;
             }
-            
-            return this.restClient.queueBuild(result);       
+
+            return this.restClient.queueBuild(result);
         }).then(result => {
             window.showInformationMessage(`Build has been queued for ${result.value.definition.name}`);
         }, error => {
@@ -172,7 +160,7 @@ export class VstsBuildStatus {
 
         return new Promise((resolve, reject) => {
             this.restClient.getDefinitions().then(response => {
-                let buildDefinitions: BuildDefinitionQuickPickItem[] = response.value.map(function(definition) {
+                let buildDefinitions: BuildDefinitionQuickPickItem[] = response.value.map(function (definition) {
                     return {
                         label: definition.name,
                         description: `Revision ${definition.revision}`,
@@ -254,9 +242,8 @@ export class VstsBuildStatus {
         this.statusBar.dispose();
         this.settings.dispose();
 
-        if (this.outputChannel) {
-            this.outputChannel.dispose();
+        if (this.logStreamHandler) {
+            this.logStreamHandler.dispose();
         }
     }
-    
 }

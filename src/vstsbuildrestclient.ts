@@ -1,12 +1,13 @@
 "use strict";
 
-import {Settings} from "./settings";
+import { Settings } from "./settings";
 import * as rest from "node-rest-client";
 
 export interface Build {
     id: number;
     result: string;
     reason: string;
+    status: string;
     startTime: string;
     queueTime: string;
     _links: {
@@ -60,6 +61,7 @@ export class VstsBuildRestClientFactoryImpl implements VstsBuildRestClientFactor
 export interface VstsBuildRestClient {
     getLatest(definition: BuildDefinition): Thenable<HttpResponse<Build>>;
     getBuilds(definition: BuildDefinition, take: number): Thenable<HttpResponse<Build[]>>;
+    getBuild(buildId: number): Thenable<HttpResponse<Build>>;
     getLog(build: Build): Thenable<HttpResponse<BuildLog>>;
     getDefinitions(): Thenable<HttpResponse<BuildDefinition[]>>;
     queueBuild(definition: BuildDefinition): Thenable<HttpResponse<QueueBuildResult>>;
@@ -88,7 +90,7 @@ class VstsBuildRestClientImpl implements VstsBuildRestClient {
     public getBuilds(definition: BuildDefinition, take: number = 5): Thenable<HttpResponse<Build[]>> {
         let url = `https://${this.settings.account}.visualstudio.com/DefaultCollection/${this.settings.project}/_apis/build/builds?definitions=${definition.id}&$top=${take}&api-version=2.0`;
 
-        return this.get<Build[]>(url).then(response => {
+        return this.getMany<Build[]>(url).then(response => {
             if (response.value && response.value.length > 0) {
                 return new HttpResponse(response.statusCode, response.value);
             }
@@ -97,12 +99,18 @@ class VstsBuildRestClientImpl implements VstsBuildRestClient {
         });
     }
 
+    public getBuild(buildId: number): Thenable<HttpResponse<Build>> {
+        let url = `https://${this.settings.account}.visualstudio.com/DefaultCollection/${this.settings.project}/_apis/build/builds/${buildId}?api-version=2.0`;
+
+        return this.getSingle<Build>(url);
+    }
+
     public getLog(build: Build): Thenable<HttpResponse<BuildLog>> {
         let url = `https://${this.settings.account}.visualstudio.com/DefaultCollection/${this.settings.project}/_apis/build/builds/${build.id}/logs?api-version=2.0`;
-        return this.get<BuildLogContainer[]>(url).then(result => {
+        return this.getMany<BuildLogContainer[]>(url).then(result => {
             return Promise.all(result.value.map(buildLogContainer => {
                 let singleLogUrl = `https://${this.settings.account}.visualstudio.com/DefaultCollection/${this.settings.project}/_apis/build/builds/${build.id}/logs/${buildLogContainer.id}?api-version=2.0`;;
-                return this.get<string[]>(singleLogUrl);
+                return this.getMany<string[]>(singleLogUrl);
             })).then(logs => {
                 let flattenedLogs: string[] = [];
 
@@ -123,7 +131,7 @@ class VstsBuildRestClientImpl implements VstsBuildRestClient {
     public getDefinitions(): Thenable<HttpResponse<BuildDefinition[]>> {
         let url = `https://${this.settings.account}.visualstudio.com/DefaultCollection/${this.settings.project}/_apis/build/definitions?api-version=2.0`;
 
-        return this.get<BuildDefinition[]>(url);
+        return this.getMany<BuildDefinition[]>(url);
     }
 
     public queueBuild(definition: BuildDefinition): Thenable<HttpResponse<QueueBuildResult>> {
@@ -138,7 +146,15 @@ class VstsBuildRestClientImpl implements VstsBuildRestClient {
         return this.post<QueueBuildResult>(url, body);
     }
 
-    private get<T>(url: string): Thenable<HttpResponse<T>> {
+    private getSingle<T>(url: string): Thenable<HttpResponse<T>> {
+        return this.get<T>(url, (data => JSON.parse(data)));
+    }
+
+    private getMany<T>(url: string): Thenable<HttpResponse<T>> {
+        return this.get<T>(url, (data => JSON.parse(data).value));
+    }
+
+    private get<T>(url: string, parser: (data: any) => T): Thenable<HttpResponse<T>> {
         return new Promise((resolve, reject) => {
             this.client.get(
                 url,
@@ -152,7 +168,7 @@ class VstsBuildRestClientImpl implements VstsBuildRestClient {
                     let result: T;
 
                     try {
-                        result = JSON.parse(data).value;
+                        result = parser(data);
                     } catch (e) {
                         result = null;
                     }
