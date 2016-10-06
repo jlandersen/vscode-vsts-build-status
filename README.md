@@ -11,6 +11,8 @@ Features:
 ![Screenshot-1](assets/vscode-selection.png)
 ![Screenshot-2](assets/vscode-status.png)
 ![Screenshot-3](assets/vscode-logs.png)
+![Screenshot-4](assets/vscode-logs-streaming.gif)
+
 
 The status bar icon will become visible when the necessary settings are provided (see Configuration).
 A selected build definition in a specific workspace will be selected automatically the next time you open that workspace.
