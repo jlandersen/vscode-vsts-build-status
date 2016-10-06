@@ -7,7 +7,8 @@ export class VstsBuildLogStreamHandler {
     private restClient: VstsBuildRestClient;
     private outputChannel: OutputChannel;
     private intervalTimer: NodeJS.Timer;
-    private updateIntervalInSeconds = 5;
+    private updateIntervalInSeconds: number = 5;
+    private currentLogIndex: number = 0;
 
     constructor(restClient: VstsBuildRestClient) {
         this.restClient = restClient;
@@ -31,13 +32,17 @@ export class VstsBuildLogStreamHandler {
                     return;
                 }
 
-                log.value.messages.forEach(element => {
+                var newLogEntries = log.value.messages.splice(this.currentLogIndex);
+                newLogEntries.forEach(element => {
                     this.outputChannel.appendLine(element);
+                    
                 });
+                this.currentLogIndex = this.currentLogIndex + newLogEntries.length;
 
                 if (build.value.status === "completed") {
                     clearInterval(this.intervalTimer);
                     this.intervalTimer = null;
+                    this.currentLogIndex = 0;
                 } else if (build.value.status !== "completed" && !this.intervalTimer) {
                     this.intervalTimer = setInterval(() => this.getNext(buildId), this.updateIntervalInSeconds * 1000);
                 }
