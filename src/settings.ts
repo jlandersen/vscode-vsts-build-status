@@ -2,18 +2,14 @@
 
 import {workspace, WorkspaceConfiguration, Memento, Disposable} from "vscode"
 import {BuildDefinition} from "./vstsbuildrestclient"
-import * as vsts from "vso-node-api/WebApi";
-import {IRequestHandler} from "vso-node-api/interfaces/common/VsoBaseInterfaces"
-import {BuildDefinitionReference} from 'vso-node-api/interfaces/BuildInterfaces';
 
 export interface Settings {
     account: string;
     username: string;
     password: string;
     project: string;
-    activeBuildDefinition: BuildDefinitionReference;
+    activeBuildDefinition: BuildDefinition;
     onDidChangeSettings(handler: () => void): void;
-    getConnection(): vsts.WebApi;
 
     dispose(): void;
     isValid(): boolean;
@@ -25,7 +21,7 @@ export class WorkspaceVstsSettings implements Settings {
     password: string;
     project: string;
 
-    private _activeBuildDefinition: BuildDefinitionReference;
+    private _activeBuildDefinition: BuildDefinition;
     private activeBuildDefinitionStateKey: string = "vsts.active.definition";
     private state: Memento;
     private workspaceSettingsChangedDisposable: Disposable;
@@ -34,7 +30,7 @@ export class WorkspaceVstsSettings implements Settings {
     constructor(state: Memento) {
         this.state = state;
 
-        var definition = state.get<BuildDefinitionReference>(this.activeBuildDefinitionStateKey);
+        var definition = state.get<BuildDefinition>(this.activeBuildDefinitionStateKey);
         if (definition) {
             this.activeBuildDefinition = definition;
         }
@@ -50,34 +46,17 @@ export class WorkspaceVstsSettings implements Settings {
         this.reload();
     }
     
-    get activeBuildDefinition(): BuildDefinitionReference {
+    get activeBuildDefinition(): BuildDefinition {
         return this._activeBuildDefinition;
     }
 
-    set activeBuildDefinition(definition: BuildDefinitionReference) {
+    set activeBuildDefinition(definition: BuildDefinition) {
         this._activeBuildDefinition = definition;
         this.state.update(this.activeBuildDefinitionStateKey, definition);
     }
 
     public onDidChangeSettings(handler: () => any): void {
         this.onDidChangeSettingsHandler = handler;
-    }
-
-    public getConnection(): vsts.WebApi {
-        if (!this.isValid()) {
-            return null;
-        }
-        
-        let collectionUrl = `https://${this.account}.visualstudio.com/DefaultCollection/`;
-        let authHandler: IRequestHandler;
-
-        if (this.username) {
-            authHandler = vsts.getBasicHandler(this.username, this.password);
-        } else {
-            authHandler = vsts.getPersonalAccessTokenHandler(this.password);
-        }
-
-        return new vsts.WebApi(collectionUrl, authHandler);
     }
 
     public isValid(): boolean {
