@@ -7,12 +7,14 @@ import { Build, BuildDefinition, VstsBuildRestClient, VstsBuildRestClientFactory
 import { VstsBuildLogStreamHandler } from "./vstsbuildlog";
 import fs = require("fs");
 import openurl = require("openurl");
+import * as vsts from "vso-node-api/WebApi";
+import * as bi from 'vso-node-api/interfaces/BuildInterfaces';
 
 interface BuildDefinitionQuickPickItem {
     id: number;
     label: string;
     description: string;
-    definition: BuildDefinition;
+    definition: bi.BuildDefinitionReference;
 }
 
 interface BuildQuickPickItem {
@@ -25,8 +27,8 @@ interface BuildQuickPickItem {
 export class VstsBuildStatus {
     private updateIntervalInSeconds = 15;
     private statusBar: VstsBuildStatusBar;
-
-    private activeDefinition: BuildDefinition;
+    
+    private activeDefinition: bi.BuildDefinitionReference;
     private settings: Settings;
     private intervalTimer: NodeJS.Timer;
     private restClient: VstsBuildRestClient;
@@ -39,7 +41,7 @@ export class VstsBuildStatus {
         this.restClient = restClientFactory.createClient(settings);
         this.activeDefinition = settings.activeBuildDefinition;
         this.logStreamHandler = new VstsBuildLogStreamHandler(this.restClient);
-
+        
         this.settings.onDidChangeSettings(() => {
             this.beginBuildStatusUpdates();
         });
@@ -151,16 +153,18 @@ export class VstsBuildStatus {
         });
     }
 
-    private getBuildDefinitionByQuickPick(placeHolder: string): Thenable<BuildDefinition> {
+    private getBuildDefinitionByQuickPick(placeHolder: string): Thenable<bi.BuildDefinitionReference> {
         if (!this.settings.isValid()) {
             this.showSettingsMissingMessage();
 
             return Promise.resolve(null);
         }
 
+        let build = this.settings.getConnection().getBuildApi();
+        
         return new Promise((resolve, reject) => {
-            this.restClient.getDefinitions().then(response => {
-                let buildDefinitions: BuildDefinitionQuickPickItem[] = response.value.map(function (definition) {
+            build.getDefinitions(this.settings.project).then(response => {
+                let buildDefinitions = response.map(definition => {
                     return {
                         label: definition.name,
                         description: `Revision ${definition.revision}`,
@@ -169,7 +173,7 @@ export class VstsBuildStatus {
                     }
                 });
 
-                let options = {
+                 let options = {
                     placeHolder: placeHolder
                 };
 
