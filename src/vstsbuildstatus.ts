@@ -140,14 +140,17 @@ export class VstsBuildStatus {
     public openQueueBuildSelection(): void {
         this.getBuildDefinitionByQuickPick("Select a build definition").then(result => {
             if (!result) {
-                return;
+                return Promise.reject(null);
             }
 
             return this.restClient.queueBuild(result);
         }).then(result => {
             window.showInformationMessage(`Build has been queued for ${result.value.definition.name}`);
         }, error => {
-            this.handleError();
+            if(error) {
+                this.handleError();
+            }
+            // Otherwise has been cancelled by the user
         });
     }
 
