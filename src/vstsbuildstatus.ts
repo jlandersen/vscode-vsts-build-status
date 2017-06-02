@@ -143,7 +143,19 @@ export class VstsBuildStatus {
                 return Promise.reject(null);
             }
 
-            return this.restClient.queueBuild(result);
+            return window.showInputBox({prompt: "Branch (left empty to use the default branch) ?"}).then(branch => {
+                if(branch !== undefined) {
+                    if(branch.length !== 0) {
+                        result.sourceBranch = branch;
+                    }
+
+                    return this.restClient.queueBuild(result);
+                }
+                else {
+                    // The user has cancel the input box
+                    return Promise.reject(null);
+                }
+            });
         }).then(result => {
             window.showInformationMessage(`Build has been queued for ${result.value.definition.name}`);
         }, error => {

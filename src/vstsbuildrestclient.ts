@@ -21,6 +21,7 @@ export interface BuildDefinition {
     id: number;
     name: string;
     revision: number;
+    sourceBranch?: string;
 }
 
 export interface BuildLog {
@@ -142,6 +143,10 @@ class VstsBuildRestClientImpl implements VstsBuildRestClient {
                 id: definition.id
             }
         };
+
+        if(definition.sourceBranch) {
+            body['sourceBranch'] = definition.sourceBranch;
+        }
 
         return this.post<QueueBuildResult>(url, body);
     }
