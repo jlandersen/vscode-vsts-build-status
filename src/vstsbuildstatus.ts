@@ -140,14 +140,29 @@ export class VstsBuildStatus {
     public openQueueBuildSelection(): void {
         this.getBuildDefinitionByQuickPick("Select a build definition").then(result => {
             if (!result) {
-                return;
+                return Promise.reject(null);
             }
 
-            return this.restClient.queueBuild(result);
+            return window.showInputBox({prompt: "Branch (leave empty to use default) ?"}).then(branch => {
+                if(branch !== undefined) {
+                    if(branch.length !== 0) {
+                        result.sourceBranch = branch;
+                    }
+
+                    return this.restClient.queueBuild(result);
+                }
+                else {
+                    // The user has cancel the input box
+                    return Promise.reject(null);
+                }
+            });
         }).then(result => {
             window.showInformationMessage(`Build has been queued for ${result.value.definition.name}`);
         }, error => {
-            this.handleError();
+            if(error) {
+                this.handleError();
+            }
+            // Otherwise has been cancelled by the user
         });
     }
 
