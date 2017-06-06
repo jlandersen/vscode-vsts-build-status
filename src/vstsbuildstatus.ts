@@ -143,7 +143,7 @@ export class VstsBuildStatus {
                 return Promise.reject(null);
             }
 
-            return window.showInputBox({prompt: "Branch (left empty to use the default branch) ?"}).then(branch => {
+            return window.showInputBox({prompt: "Branch (leave empty to use default) ?"}).then(branch => {
                 if(branch !== undefined) {
                     if(branch.length !== 0) {
                         result.sourceBranch = branch;
