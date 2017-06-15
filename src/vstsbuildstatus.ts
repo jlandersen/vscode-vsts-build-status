@@ -64,7 +64,7 @@ export class VstsBuildStatus {
         }
 
         if (!this.activeDefinition) {
-            this.statusBar.displayInformation("Select build definition", "");
+            this.statusBar.displayInformation("Select build definition");
 
             return;
         }
