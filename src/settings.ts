@@ -64,7 +64,7 @@ export class WorkspaceVstsSettings implements Settings {
     }
 
     public isValid(): boolean {
-        return this.isAccountProvided() && this.isCredentialsProvided() && this.isProjectSpecified();
+        return this.isAccountProvided() && this.isCredentialsProvided() && this.isProjectSpecified() && this.isBuildDefinitionsNameSpecified();
     }
 
     public dispose(): void {
@@ -98,7 +98,7 @@ export class WorkspaceVstsSettings implements Settings {
     }
 
     private isBuildDefinitionsNameSpecified(): boolean {
-        if (this.activeBuildDefinitions.length > 1 && !this.definitionsGroupName) {
+        if (this.definitionsGroup && !this.definitionsGroupName) {
             return false;
         }
 
@@ -113,11 +113,11 @@ export class WorkspaceVstsSettings implements Settings {
         this.password = configuration.get<string>("password").trim();
         this.project = configuration.get<string>("project").trim();
 
-        const defsGroup = configuration.get<string>("definitionsGroup").trim();
+        const definitionsGroup = configuration.get<string>("definitionsGroup").trim();
         this.definitionsGroupName = configuration.get<string>("definitionsGroupName").trim();
         
-        if (defsGroup) {
-            const buildIds = defsGroup.split(',').map(id => parseInt(id));
+        if (definitionsGroup) {
+            const buildIds = definitionsGroup.split(',').map(id => parseInt(id));
             let defList = [];
             buildIds.forEach(id => {
                 defList.push({

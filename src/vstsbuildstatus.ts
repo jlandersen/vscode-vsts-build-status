@@ -53,7 +53,7 @@ export class VstsBuildStatus {
 
     public updateStatus(): void {
         // Updates the status bar depending on the state. 
-        // If everything goes well, the method ißs set up to be called periodically.
+        // If everything goes well, the method is set up to be called periodically.
 
         if (!this.settings.isValid()) {
             this.tryCancelPeriodicStatusUpdate();
@@ -76,7 +76,7 @@ export class VstsBuildStatus {
                     return;
                 }
 
-                let succeeded = true; // 0 failed, 1 succeeded, 2 in progress
+                let succeeded = true;
                 for (let build of response.value) {
                     if (build.result) {
                         if (build.result !== "succeeded") {
@@ -209,7 +209,7 @@ export class VstsBuildStatus {
                 if (this.settings.definitionsGroup) {
                     buildDefinitions.push({
                             label: this.settings.definitionsGroupName ? this.settings.definitionsGroupName : this.settings.definitionsGroup.map(b => b.id.toString()).join(','),
-                            description: 'Group Build Definition',
+                            description: 'Grouped Build Definitions',
                             ids: this.settings.definitionsGroup.map(b => b.id),
                             definitions: this.settings.definitionsGroup
                     });
