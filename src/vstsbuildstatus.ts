@@ -209,7 +209,7 @@ export class VstsBuildStatus {
                 if (this.settings.definitionsGroup) {
                     buildDefinitions.push({
                             label: this.settings.definitionsGroupName ? this.settings.definitionsGroupName : this.settings.definitionsGroup.map(b => b.id.toString()).join(','),
-                            description: 'Grouped Build Definitions',
+                            description: 'Grouped Build Definition',
                             ids: this.settings.definitionsGroup.map(b => b.id),
                             definitions: this.settings.definitionsGroup
                     });

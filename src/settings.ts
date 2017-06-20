@@ -118,12 +118,12 @@ export class WorkspaceVstsSettings implements Settings {
         
         if (definitionsGroup) {
             const buildIds = definitionsGroup.split(',').map(id => parseInt(id));
-            let defList = [];
+            let defList: BuildDefinition[] = [];
             buildIds.forEach(id => {
                 defList.push({
                     id: id,
                     name: this.definitionsGroupName,
-                    revision: 0
+                    revision: undefined
                 });
             });
             this.definitionsGroup = defList;            
