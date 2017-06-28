@@ -62,7 +62,7 @@ export class VstsBuildStatus {
             return;
         }
 
-        if (!this.activeDefinitions) {
+        if (!this.activeDefinitions || this.activeDefinitions.length < 1) {
             this.statusBar.displayInformation("Select a single build definition or set an aggregated list of IDs in settings");
             return;
         }
