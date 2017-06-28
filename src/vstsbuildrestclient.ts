@@ -60,8 +60,7 @@ export class VstsBuildRestClientFactoryImpl implements VstsBuildRestClientFactor
 }
 
 export interface VstsBuildRestClient {
-    getLatest(definition: BuildDefinition): Thenable<HttpResponse<Build>>;
-    getBuilds(definition: BuildDefinition, take: number): Thenable<HttpResponse<Build[]>>;
+    getBuilds(definitions: BuildDefinition[], take: number): Thenable<HttpResponse<Build[]>>;
     getBuild(buildId: number): Thenable<HttpResponse<Build>>;
     getLog(build: Build): Thenable<HttpResponse<BuildLog>>;
     getDefinitions(): Thenable<HttpResponse<BuildDefinition[]>>;
@@ -78,18 +77,8 @@ class VstsBuildRestClientImpl implements VstsBuildRestClient {
         this.client = new rest.Client();
     }
 
-    public getLatest(definition: BuildDefinition): Thenable<HttpResponse<Build>> {
-        return this.getBuilds(definition, 1).then(result => {
-            if (result.value.length > 0) {
-                return new HttpResponse(200, result.value[0]);
-            }
-
-            return VstsBuildRestClientImpl.emptyHttpResponse;
-        });
-    }
-
-    public getBuilds(definition: BuildDefinition, take: number = 5): Thenable<HttpResponse<Build[]>> {
-        let url = `https://${this.settings.account}.visualstudio.com/DefaultCollection/${this.settings.project}/_apis/build/builds?definitions=${definition.id}&$top=${take}&api-version=2.0`;
+    public getBuilds(definitions: BuildDefinition[], take: number = 5): Thenable<HttpResponse<Build[]>> {
+        let url = `https://${this.settings.account}.visualstudio.com/DefaultCollection/${this.settings.project}/_apis/build/builds?definitions=${definitions.map(d => d.id).join(',')}&$top=${take}&api-version=2.0`;
 
         return this.getMany<Build[]>(url).then(response => {
             if (response.value && response.value.length > 0) {

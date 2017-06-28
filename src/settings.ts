@@ -8,7 +8,9 @@ export interface Settings {
     username: string;
     password: string;
     project: string;
-    activeBuildDefinition: BuildDefinition;
+    activeBuildDefinitions: BuildDefinition[];
+    definitionsGroup?: BuildDefinition[];
+    definitionsGroupName?: string;
     onDidChangeSettings(handler: () => void): void;
 
     dispose(): void;
@@ -20,9 +22,11 @@ export class WorkspaceVstsSettings implements Settings {
     username: string;
     password: string;
     project: string;
+    definitionsGroup?: BuildDefinition[];
+    definitionsGroupName?: string;
 
-    private _activeBuildDefinition: BuildDefinition;
-    private activeBuildDefinitionStateKey: string = "vsts.active.definition";
+    private _activeBuildDefinitions: BuildDefinition[] = [];
+    private activeBuildDefinitionsStateKey: string = "vsts.active.definitions";
     private state: Memento;
     private workspaceSettingsChangedDisposable: Disposable;
     private onDidChangeSettingsHandler: () => any;
@@ -30,9 +34,9 @@ export class WorkspaceVstsSettings implements Settings {
     constructor(state: Memento) {
         this.state = state;
 
-        var definition = state.get<BuildDefinition>(this.activeBuildDefinitionStateKey);
-        if (definition) {
-            this.activeBuildDefinition = definition;
+        var definitions = state.get<BuildDefinition[]>(this.activeBuildDefinitionsStateKey);
+        if (definitions) {
+            this.activeBuildDefinitions = definitions;
         }
 
         this.workspaceSettingsChangedDisposable = workspace.onDidChangeConfiguration(() => {
@@ -46,13 +50,13 @@ export class WorkspaceVstsSettings implements Settings {
         this.reload();
     }
     
-    get activeBuildDefinition(): BuildDefinition {
-        return this._activeBuildDefinition;
+    get activeBuildDefinitions(): BuildDefinition[] {
+        return this._activeBuildDefinitions;
     }
 
-    set activeBuildDefinition(definition: BuildDefinition) {
-        this._activeBuildDefinition = definition;
-        this.state.update(this.activeBuildDefinitionStateKey, definition);
+    set activeBuildDefinitions(definitions: BuildDefinition[]) {
+        this._activeBuildDefinitions = definitions;
+        this.state.update(this.activeBuildDefinitionsStateKey, definitions);
     }
 
     public onDidChangeSettings(handler: () => any): void {
@@ -60,7 +64,7 @@ export class WorkspaceVstsSettings implements Settings {
     }
 
     public isValid(): boolean {
-        return this.isAccountProvided() && this.isCredentialsProvided() && this.isProjectSpecified();
+        return this.isAccountProvided() && this.isCredentialsProvided() && this.isProjectSpecified() && this.isBuildDefinitionsNameSpecified();
     }
 
     public dispose(): void {
@@ -93,6 +97,14 @@ export class WorkspaceVstsSettings implements Settings {
         return false;
     }
 
+    private isBuildDefinitionsNameSpecified(): boolean {
+        if (this.definitionsGroup && !this.definitionsGroupName) {
+            return false;
+        }
+
+        return true;
+    }
+
     private reload() {
         var configuration = workspace.getConfiguration("vsts");
 
@@ -100,5 +112,22 @@ export class WorkspaceVstsSettings implements Settings {
         this.username = configuration.get<string>("username").trim();
         this.password = configuration.get<string>("password").trim();
         this.project = configuration.get<string>("project").trim();
+
+        const definitionsGroup = configuration.get<string>("definitionsGroup").trim();
+        this.definitionsGroupName = configuration.get<string>("definitionsGroupName").trim();
+        
+        if (definitionsGroup) {
+            const buildIds = definitionsGroup.split(',').map(id => parseInt(id));
+            let defList: BuildDefinition[] = [];
+            buildIds.forEach(id => {
+                defList.push({
+                    id: id,
+                    name: this.definitionsGroupName,
+                    revision: undefined
+                });
+            });
+            this.definitionsGroup = defList;            
+            this.activeBuildDefinitions = defList;
+        }
     }
 }

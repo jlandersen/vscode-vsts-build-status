@@ -28,5 +28,14 @@ The extension is enabled by providing the following settings (user or workspace)
 }
 ```
 
+It also allows to add several build definitions grouped into one status bar indicator. It could be helpful if you trigger multiple builds which overall result is success only if all builds are passing (e.g. when running multiple build definitions on the same code base cross-platform). To enable grouped build definitions, add the following configuration in addition to the one at the top:
+
+```json
+{
+    "vsts.definitionsGroup": "1,2,3", // IDs of build definitions to be grouped, separated with a comma
+    "vsts.definitionsGroupName": "My Grouped Builds", // Name of the grouped build definitions
+}
+```
+
 ## License
 MIT, please see LICENSE for details. Copyright (c) 2016 Jeppe Andersen.

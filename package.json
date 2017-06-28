@@ -73,6 +73,16 @@
                     "type": "string",
                     "default": "",
                     "description": "Specifies the VSTS project to look for builds in."
+                },
+                "vsts.definitionsGroup": {
+                    "type": "string",
+                    "default": "",
+                    "description": "Allows to group status of the several build definitions by IDs (e.g. '1,2,3')."
+                },
+                "vsts.definitionsGroupName": {
+                    "type": "string",
+                    "default": "",
+                    "description": "Allows to provide name for grouped build definitions."
                 }
             }
         },

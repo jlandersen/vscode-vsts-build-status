@@ -9,10 +9,10 @@ import fs = require("fs");
 import openurl = require("openurl");
 
 interface BuildDefinitionQuickPickItem {
-    id: number;
+    ids: number[];
     label: string;
     description: string;
-    definition: BuildDefinition;
+    definitions: BuildDefinition[];
 }
 
 interface BuildQuickPickItem {
@@ -26,18 +26,17 @@ export class VstsBuildStatus {
     private updateIntervalInSeconds = 15;
     private statusBar: VstsBuildStatusBar;
 
-    private activeDefinition: BuildDefinition;
+    private activeDefinitions: BuildDefinition[];
     private settings: Settings;
     private intervalTimer: NodeJS.Timer;
     private restClient: VstsBuildRestClient;
     private logStreamHandler: VstsBuildLogStreamHandler;
 
-
     constructor(settings: Settings, restClientFactory: VstsBuildRestClientFactory) {
         this.settings = settings;
         this.statusBar = new VstsBuildStatusBar();
         this.restClient = restClientFactory.createClient(settings);
-        this.activeDefinition = settings.activeBuildDefinition;
+        this.activeDefinitions = settings.activeBuildDefinitions;
         this.logStreamHandler = new VstsBuildLogStreamHandler(this.restClient);
 
         this.settings.onDidChangeSettings(() => {
@@ -54,7 +53,7 @@ export class VstsBuildStatus {
 
     public updateStatus(): void {
         // Updates the status bar depending on the state. 
-        // If everything goes well, the method ißs set up to be called periodically.
+        // If everything goes well, the method is set up to be called periodically.
 
         if (!this.settings.isValid()) {
             this.tryCancelPeriodicStatusUpdate();
@@ -63,26 +62,37 @@ export class VstsBuildStatus {
             return;
         }
 
-        if (!this.activeDefinition) {
-            this.statusBar.displayInformation("Select build definition", "");
-
+        if (!this.activeDefinitions || this.activeDefinitions.length < 1) {
+            this.statusBar.displayInformation("Select a single build definition or set an aggregated list of IDs in settings");
             return;
         }
 
-        this.restClient.getLatest(this.activeDefinition).then(
+        this.restClient.getBuilds(this.activeDefinitions, this.activeDefinitions.length).then(
             response => {
+                const definitionName = this.settings.definitionsGroupName && this.activeDefinitions.length > 1 ? this.settings.definitionsGroupName : this.activeDefinitions[0].name;
+
                 if (!response.value) {
-                    this.statusBar.displayNoBuilds(this.activeDefinition.name, "No builds found");
+                    this.statusBar.displayNoBuilds(definitionName, "No builds found");
+                    return;
                 }
 
-                if (response.value && response.value.result) {
-                    if (response.value.result === "succeeded") {
-                        this.statusBar.displaySuccess(this.activeDefinition.name, "Last build was completed successfully");
-                    } else {
-                        this.statusBar.displayError(this.activeDefinition.name, "Last build failed");
+                let succeeded = true;
+                for (let build of response.value) {
+                    if (build.result) {
+                        if (build.result !== "succeeded") {
+                            this.statusBar.displayError(definitionName, "Last build failed");
+                            succeeded = false;
+                            break;
+                        }
+                    } else if (response.value) {
+                        this.statusBar.displayLoading(definitionName, "Build in progress...");
+                        succeeded = false;
+                        break;
                     }
-                } else if (response.value) {
-                    this.statusBar.displayLoading(this.activeDefinition.name, "Build in progress...");
+                }
+
+                if (succeeded) {
+                    this.statusBar.displaySuccess(definitionName, "Last build was completed successfully");
                 }
 
                 this.tryStartPeriodicStatusUpdate();
@@ -94,8 +104,8 @@ export class VstsBuildStatus {
     public openBuildDefinitionSelection(): void {
         this.getBuildDefinitionByQuickPick("Select a build definition to monitor").then(result => {
             if (result) {
-                this.activeDefinition = result;
-                this.settings.activeBuildDefinition = this.activeDefinition;
+                this.activeDefinitions = result;
+                this.settings.activeBuildDefinitions = this.activeDefinitions;
                 this.updateStatus();
             }
         }, error => {
@@ -108,8 +118,12 @@ export class VstsBuildStatus {
             if (!result) {
                 return;
             }
+            if (result.length > 1) {
+                window.showInformationMessage(`Group build definition cannot be opened, please select single one instead.`);
+                return;
+            }
 
-            return this.getBuildByQuickPick(result, "Select a build to open");
+            return this.getBuildByQuickPick(result[0], "Select a build to open");
         }).then(build => {
             if (!build) {
                 return;
@@ -124,8 +138,12 @@ export class VstsBuildStatus {
             if (!result) {
                 return;
             }
+            if (result.length > 1) {
+                window.showInformationMessage(`Viewing group build is not possible, please select single build instead.`);
+                return;
+            }
 
-            return this.getBuildByQuickPick(result, "Select a build to view");
+            return this.getBuildByQuickPick(result[0], "Select a build to view");
         }).then(build => {
             if (!build) {
                 return;
@@ -142,14 +160,18 @@ export class VstsBuildStatus {
             if (!result) {
                 return Promise.reject(null);
             }
+            if (result.length > 1) {
+                window.showInformationMessage(`Queueing group build is not possible, please queue single builds one-by-one instead.`);
+                return Promise.reject(null);;
+            }
 
             return window.showInputBox({prompt: "Branch (leave empty to use default) ?"}).then(branch => {
                 if(branch !== undefined) {
                     if(branch.length !== 0) {
-                        result.sourceBranch = branch;
+                        result[0].sourceBranch = branch;
                     }
 
-                    return this.restClient.queueBuild(result);
+                    return this.restClient.queueBuild(result[0]);
                 }
                 else {
                     // The user has cancel the input box
@@ -166,7 +188,7 @@ export class VstsBuildStatus {
         });
     }
 
-    private getBuildDefinitionByQuickPick(placeHolder: string): Thenable<BuildDefinition> {
+    private getBuildDefinitionByQuickPick(placeHolder: string): Thenable<BuildDefinition[]> {
         if (!this.settings.isValid()) {
             this.showSettingsMissingMessage();
 
@@ -179,10 +201,19 @@ export class VstsBuildStatus {
                     return {
                         label: definition.name,
                         description: `Revision ${definition.revision}`,
-                        id: definition.id,
-                        definition: definition
+                        ids: [definition.id],
+                        definitions: [definition]
                     }
                 });
+
+                if (this.settings.definitionsGroup) {
+                    buildDefinitions.push({
+                            label: this.settings.definitionsGroupName ? this.settings.definitionsGroupName : this.settings.definitionsGroup.map(b => b.id.toString()).join(','),
+                            description: 'Grouped Build Definition',
+                            ids: this.settings.definitionsGroup.map(b => b.id),
+                            definitions: this.settings.definitionsGroup
+                    });
+                }
 
                 let options = {
                     placeHolder: placeHolder
@@ -190,7 +221,7 @@ export class VstsBuildStatus {
 
                 window.showQuickPick(buildDefinitions, options).then(result => {
                     if (result) {
-                        resolve(result.definition);
+                        resolve(result.definitions);
                     } else {
                         resolve(null);
                     }
@@ -202,7 +233,7 @@ export class VstsBuildStatus {
     }
 
     private getBuildByQuickPick(definition: BuildDefinition, placeHolder: string): Thenable<Build> {
-        return this.restClient.getBuilds(definition, 10).then(builds => {
+        return this.restClient.getBuilds([definition], 10).then(builds => {
             let buildQuickPickItems: BuildQuickPickItem[] = builds.value.map(build => {
                 return {
                     label: new Date(build.queueTime).toLocaleString(),
