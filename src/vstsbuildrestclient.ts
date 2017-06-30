@@ -79,6 +79,9 @@ class VstsBuildRestClientImpl implements VstsBuildRestClient {
 
     public getBuilds(definitions: BuildDefinition[], take: number = 5): Thenable<HttpResponse<Build[]>> {
         let url = `https://${this.settings.account}.visualstudio.com/DefaultCollection/${this.settings.project}/_apis/build/builds?definitions=${definitions.map(d => d.id).join(',')}&$top=${take}&api-version=2.0`;
+        if (definitions.length > 1) { // Return single build per definition, if grouped build definitions were queried
+            url += `&maxBuildsPerDefinition=1`;
+        }
 
         return this.getMany<Build[]>(url).then(response => {
             if (response.value && response.value.length > 0) {
