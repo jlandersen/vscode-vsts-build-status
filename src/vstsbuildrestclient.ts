@@ -60,11 +60,11 @@ export class VstsBuildRestClientFactoryImpl implements VstsBuildRestClientFactor
 }
 
 export interface VstsBuildRestClient {
-    getBuilds(definitions: BuildDefinition[], take: number): Thenable<HttpResponse<Build[]>>;
-    getBuild(buildId: number): Thenable<HttpResponse<Build>>;
-    getLog(build: Build): Thenable<HttpResponse<BuildLog>>;
-    getDefinitions(): Thenable<HttpResponse<BuildDefinition[]>>;
-    queueBuild(definitionId: number, sourceBranch?: string): Thenable<HttpResponse<QueueBuildResult>>;
+    getBuilds(definitions: BuildDefinition[], take: number): Promise<HttpResponse<Build[]>>;
+    getBuild(buildId: number): Promise<HttpResponse<Build>>;
+    getLog(build: Build): Promise<HttpResponse<BuildLog>>;
+    getDefinitions(): Promise<HttpResponse<BuildDefinition[]>>;
+    queueBuild(definitionId: number, sourceBranch?: string): Promise<HttpResponse<QueueBuildResult>>;
 }
 
 class VstsBuildRestClientImpl implements VstsBuildRestClient {
@@ -77,7 +77,7 @@ class VstsBuildRestClientImpl implements VstsBuildRestClient {
         this.client = new rest.Client();
     }
 
-    public getBuilds(definitions: BuildDefinition[], take: number = 5): Thenable<HttpResponse<Build[]>> {
+    public getBuilds(definitions: BuildDefinition[], take: number = 5): Promise<HttpResponse<Build[]>> {
         let url = `https://${this.settings.account}.visualstudio.com/DefaultCollection/${this.settings.project}/_apis/build/builds?definitions=${definitions.map(d => d.id).join(',')}&$top=${take}&api-version=2.0`;
         if (definitions.length > 1) { // Return single build per definition, if grouped build definitions were queried
             url += `&maxBuildsPerDefinition=1`;
@@ -92,17 +92,17 @@ class VstsBuildRestClientImpl implements VstsBuildRestClient {
         });
     }
 
-    public getBuild(buildId: number): Thenable<HttpResponse<Build>> {
+    public getBuild(buildId: number): Promise<HttpResponse<Build>> {
         let url = `https://${this.settings.account}.visualstudio.com/DefaultCollection/${this.settings.project}/_apis/build/builds/${buildId}?api-version=2.0`;
 
         return this.getSingle<Build>(url);
     }
 
-    public getLog(build: Build): Thenable<HttpResponse<BuildLog>> {
+    public getLog(build: Build): Promise<HttpResponse<BuildLog>> {
         let url = `https://${this.settings.account}.visualstudio.com/DefaultCollection/${this.settings.project}/_apis/build/builds/${build.id}/logs?api-version=2.0`;
         return this.getMany<BuildLogContainer[]>(url).then(result => {
             return <PromiseLike<HttpResponse<BuildLog>>>Promise.all(result.value.map(buildLogContainer => {
-                let singleLogUrl = `https://${this.settings.account}.visualstudio.com/DefaultCollection/${this.settings.project}/_apis/build/builds/${build.id}/logs/${buildLogContainer.id}?api-version=2.0`;;
+                let singleLogUrl = `https://${this.settings.account}.visualstudio.com/DefaultCollection/${this.settings.project}/_apis/build/builds/${build.id}/logs/${buildLogContainer.id}?api-version=2.0`;
                 return this.getMany<string[]>(singleLogUrl);
             })).then(logs => {
                 let flattenedLogs: string[] = [];
@@ -121,13 +121,13 @@ class VstsBuildRestClientImpl implements VstsBuildRestClient {
         });
     }
 
-    public getDefinitions(): Thenable<HttpResponse<BuildDefinition[]>> {
+    public getDefinitions(): Promise<HttpResponse<BuildDefinition[]>> {
         let url = `https://${this.settings.account}.visualstudio.com/DefaultCollection/${this.settings.project}/_apis/build/definitions?api-version=2.0`;
 
         return this.getMany<BuildDefinition[]>(url);
     }
 
-    public queueBuild(definitionId: number, sourceBranch: string): Thenable<HttpResponse<QueueBuildResult>> {
+    public queueBuild(definitionId: number, sourceBranch: string): Promise<HttpResponse<QueueBuildResult>> {
         let url = `https://${this.settings.account}.visualstudio.com/DefaultCollection/${this.settings.project}/_apis/build/builds?api-version=2.0`;
 
         let body = {
@@ -136,22 +136,22 @@ class VstsBuildRestClientImpl implements VstsBuildRestClient {
             }
         };
 
-        if(sourceBranch) {
+        if (sourceBranch) {
             body['sourceBranch'] = sourceBranch;
         }
 
         return this.post<QueueBuildResult>(url, body);
     }
 
-    private getSingle<T>(url: string): Thenable<HttpResponse<T>> {
+    private getSingle<T>(url: string): Promise<HttpResponse<T>> {
         return this.get<T>(url, (data => JSON.parse(data)));
     }
 
-    private getMany<T>(url: string): Thenable<HttpResponse<T>> {
+    private getMany<T>(url: string): Promise<HttpResponse<T>> {
         return this.get<T>(url, (data => JSON.parse(data).value));
     }
 
-    private get<T>(url: string, parser: (data: any) => T): Thenable<HttpResponse<T>> {
+    private get<T>(url: string, parser: (data: any) => T): Promise<HttpResponse<T>> {
         return new Promise((resolve, reject) => {
             this.client.get(
                 url,
@@ -177,7 +177,7 @@ class VstsBuildRestClientImpl implements VstsBuildRestClient {
         });
     }
 
-    private post<T>(url: string, body: any): Thenable<HttpResponse<T>> {
+    private post<T>(url: string, body: any): Promise<HttpResponse<T>> {
         var args = {
             data: body,
             headers: {
