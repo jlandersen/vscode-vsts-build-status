@@ -1,7 +1,7 @@
 "use strict";
 
-import { window, OutputChannel } from "vscode";
-import { Build, BuildDefinition, VstsBuildRestClient } from "./vstsbuildrestclient"
+import {window, OutputChannel} from "vscode";
+import {Build, BuildDefinition, VstsBuildRestClient} from "./vstsbuildrestclient"
 
 export class VstsBuildLogStreamHandler {
     private restClient: VstsBuildRestClient;

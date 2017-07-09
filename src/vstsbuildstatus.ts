@@ -1,12 +1,11 @@
 "use strict";
 
-import { window, OutputChannel, QuickPickItem } from "vscode";
-import { Settings } from "./settings";
-import { VstsBuildStatusBar } from "./vstsbuildstatusbar";
-import { Build, BuildDefinition, VstsBuildRestClient, VstsBuildRestClientFactory } from "./vstsbuildrestclient";
-import { VstsBuildLogStreamHandler } from "./vstsbuildlog";
-import fs = require("fs");
-import openurl = require("openurl");
+import {window, OutputChannel, QuickPickItem} from "vscode";
+import {Settings} from "./settings";
+import {VstsBuildStatusBar} from "./vstsbuildstatusbar";
+import {Build, BuildDefinition, VstsBuildRestClient, VstsBuildRestClientFactory} from "./vstsbuildrestclient";
+import {VstsBuildLogStreamHandler} from "./vstsbuildlog";
+import * as openurl from "openurl";
 
 interface BuildDefinitionQuickPickItem {
     ids: number[];

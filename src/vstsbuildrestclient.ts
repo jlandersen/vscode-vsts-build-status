@@ -1,6 +1,6 @@
 "use strict";
 
-import { Settings } from "./settings";
+import {Settings} from "./settings";
 import * as rest from "node-rest-client";
 
 export interface Build {
