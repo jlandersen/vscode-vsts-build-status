@@ -123,7 +123,7 @@ export class VstsBuildStatus {
                 return;
             }
 
-            return this.getBuildByQuickPick(result[0], "Select a build to open");
+            return this.getBuildByQuickPick(result[0], "Select a build to open").then(build => build);
         }).then(build => {
             if (!build) {
                 return;
@@ -143,7 +143,7 @@ export class VstsBuildStatus {
                 return;
             }
 
-            return this.getBuildByQuickPick(result[0], "Select a build to view");
+            return this.getBuildByQuickPick(result[0], "Select a build to view").then(build => build);
         }).then(build => {
             if (!build) {
                 return;
@@ -156,43 +156,47 @@ export class VstsBuildStatus {
     }
 
     public openQueueBuildSelection(): void {
-        this.getBuildDefinitionByQuickPick("Select a build definition").then(result => {
-            if (!result) {
-                return Promise.reject(null);
-            }
-            if (result.length > 1) {
-                window.showInformationMessage(`Queueing group build is not possible, please queue single builds one-by-one instead.`);
-                return Promise.reject(null);;
-            }
+        let getBuildDefinition = this.getBuildDefinitionByQuickPick("Select a build definition");
+        let getBranch = getBuildDefinition.then(_ => {
+                return window.showInputBox({ prompt: "Branch (leave empty to use default) ?" });
+        });
 
-            return window.showInputBox({prompt: "Branch (leave empty to use default) ?"}).then(branch => {
-                if(branch !== undefined) {
-                    if(branch.length !== 0) {
-                        result[0].sourceBranch = branch;
-                    }
+        Promise.all([getBuildDefinition, getBranch])
+            .then((result: [BuildDefinition[], string]) => {
+                let selectedBuildDefinition = result[0];
+                let selectedBranch = result[1];
 
-                    return this.restClient.queueBuild(result[0]);
-                }
-                else {
-                    // The user has cancel the input box
+                if (!selectedBuildDefinition) {
                     return Promise.reject(null);
                 }
+
+                if (selectedBuildDefinition.length > 1) {
+                    window.showInformationMessage(`Queueing group build is not possible, please queue single builds one-by-one instead.`);
+                    return Promise.reject(null);
+                }
+
+                if (selectedBranch === undefined) {
+                    return Promise.reject(null);
+                }
+
+                return this.restClient.queueBuild(selectedBuildDefinition[0].id, selectedBranch);
+            })
+            .then(result => {
+                window.showInformationMessage(`Build has been queued for ${result.value.definition.name}`);
+            })
+            .catch(error => {
+                if (error) {
+                    this.handleError();
+                }
+                // Otherwise has been cancelled by the user
             });
-        }).then(result => {
-            window.showInformationMessage(`Build has been queued for ${result.value.definition.name}`);
-        }, error => {
-            if(error) {
-                this.handleError();
-            }
-            // Otherwise has been cancelled by the user
-        });
     }
 
-    private getBuildDefinitionByQuickPick(placeHolder: string): Thenable<BuildDefinition[]> {
+    private getBuildDefinitionByQuickPick(placeHolder: string): Promise<BuildDefinition[]> {
         if (!this.settings.isValid()) {
             this.showSettingsMissingMessage();
 
-            return Promise.resolve(null);
+            return Promise.resolve<BuildDefinition[]>(null);
         }
 
         return new Promise((resolve, reject) => {

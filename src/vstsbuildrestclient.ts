@@ -64,7 +64,7 @@ export interface VstsBuildRestClient {
     getBuild(buildId: number): Thenable<HttpResponse<Build>>;
     getLog(build: Build): Thenable<HttpResponse<BuildLog>>;
     getDefinitions(): Thenable<HttpResponse<BuildDefinition[]>>;
-    queueBuild(definition: BuildDefinition): Thenable<HttpResponse<QueueBuildResult>>;
+    queueBuild(definitionId: number, sourceBranch?: string): Thenable<HttpResponse<QueueBuildResult>>;
 }
 
 class VstsBuildRestClientImpl implements VstsBuildRestClient {
@@ -101,7 +101,7 @@ class VstsBuildRestClientImpl implements VstsBuildRestClient {
     public getLog(build: Build): Thenable<HttpResponse<BuildLog>> {
         let url = `https://${this.settings.account}.visualstudio.com/DefaultCollection/${this.settings.project}/_apis/build/builds/${build.id}/logs?api-version=2.0`;
         return this.getMany<BuildLogContainer[]>(url).then(result => {
-            return Promise.all(result.value.map(buildLogContainer => {
+            return <PromiseLike<HttpResponse<BuildLog>>>Promise.all(result.value.map(buildLogContainer => {
                 let singleLogUrl = `https://${this.settings.account}.visualstudio.com/DefaultCollection/${this.settings.project}/_apis/build/builds/${build.id}/logs/${buildLogContainer.id}?api-version=2.0`;;
                 return this.getMany<string[]>(singleLogUrl);
             })).then(logs => {
@@ -127,17 +127,17 @@ class VstsBuildRestClientImpl implements VstsBuildRestClient {
         return this.getMany<BuildDefinition[]>(url);
     }
 
-    public queueBuild(definition: BuildDefinition): Thenable<HttpResponse<QueueBuildResult>> {
+    public queueBuild(definitionId: number, sourceBranch: string): Thenable<HttpResponse<QueueBuildResult>> {
         let url = `https://${this.settings.account}.visualstudio.com/DefaultCollection/${this.settings.project}/_apis/build/builds?api-version=2.0`;
 
         let body = {
             definition: {
-                id: definition.id
+                id: definitionId
             }
         };
 
-        if(definition.sourceBranch) {
-            body['sourceBranch'] = definition.sourceBranch;
+        if(sourceBranch) {
+            body['sourceBranch'] = sourceBranch;
         }
 
         return this.post<QueueBuildResult>(url, body);
