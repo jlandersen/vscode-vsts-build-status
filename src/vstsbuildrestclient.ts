@@ -1,7 +1,7 @@
 "use strict";
 
-import {Settings} from "./settings";
-import * as rest from "node-rest-client";
+import fetch, { Response, RequestInit } from "node-fetch";
+import { Settings } from "./settings";
 
 export interface Build {
     id: number;
@@ -69,12 +69,10 @@ export interface VstsBuildRestClient {
 
 class VstsBuildRestClientImpl implements VstsBuildRestClient {
     private static emptyHttpResponse = new HttpResponse(200, null);
-    private client: any;
     private settings: Settings;
 
     constructor(settings: Settings) {
         this.settings = settings;
-        this.client = new rest.Client();
     }
 
     public getBuilds(definitions: BuildDefinition[], take: number = 5): Promise<HttpResponse<Build[]>> {
@@ -144,72 +142,58 @@ class VstsBuildRestClientImpl implements VstsBuildRestClient {
     }
 
     private getSingle<T>(url: string): Promise<HttpResponse<T>> {
-        return this.get<T>(url, (data => JSON.parse(data)));
+        return this.get<T>(url, (data => data));
     }
 
     private getMany<T>(url: string): Promise<HttpResponse<T>> {
-        return this.get<T>(url, (data => JSON.parse(data).value));
+        return this.get<T>(url, (data => data.value));
     }
 
     private get<T>(url: string, parser: (data: any) => T): Promise<HttpResponse<T>> {
-        return new Promise((resolve, reject) => {
-            this.client.get(
-                url,
-                { headers: { "Authorization": this.getAuthorizationHeaderValue() } },
-                (data, response) => {
-                    if (response.statusCode !== 200) {
-                        reject("Status code indicated non-OK result " + response.statusCode);
-                        return;
-                    }
+        let args: RequestInit = {
+            headers: {
+                "Authorization": this.getAuthorizationHeaderValue(),
+            }
+        }
 
-                    let result: T;
+        let request = fetch(url, args)
+            .then(res => {
+                if (res.status !== 200) {
+                    return Promise.reject("Status indicated non-OK result " + res.status);
+                }
 
-                    try {
-                        result = parser(data);
-                    } catch (e) {
-                        result = null;
-                    }
+                return res.json<T>();
+            })
+            .then(value => {
+                return new HttpResponse(200, parser(value));
+            });
 
-                    resolve(new HttpResponse(response.statusCode, result));
-                }).on("error", error => {
-                    reject(error);
-                });
-        });
+        return request;
     }
 
     private post<T>(url: string, body: any): Promise<HttpResponse<T>> {
-        var args = {
-            data: body,
+        let args: RequestInit = {
+            method: "POST",
+            body: JSON.stringify(body),
             headers: {
                 "Authorization": this.getAuthorizationHeaderValue(),
                 "Content-Type": "application/json"
             }
         };
 
-        return new Promise((resolve, reject) => {
-            this.client.post(
-                url,
-                args,
-                (data, response) => {
-                    if (response.statusCode !== 200) {
-                        reject("Status code indicated non-OK result " + response.statusCode);
-                        return;
-                    }
-
-                    let result: T;
-
-                    try {
-                        result = JSON.parse(data);
-                    } catch (e) {
-                        result = null;
-                    }
-
-                    resolve(new HttpResponse(response.statusCode, result));
+        let request = fetch(url, args)
+            .then(res => {
+                if (res.status !== 200) {
+                    return Promise.reject("Status indicated non-OK result " + res.status);
                 }
-            ).on("error", error => {
-                reject(error);
+
+                return res.json<T>();
+            })
+            .then(value => {
+                return new HttpResponse(200, value);
             });
-        });
+
+        return request;
     }
 
     private getAuthorizationHeaderValue(): string {
