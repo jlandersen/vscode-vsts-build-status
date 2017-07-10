@@ -3,7 +3,7 @@
 import {window, OutputChannel, QuickPickItem} from "vscode";
 import {Settings} from "./settings";
 import {VstsBuildStatusBar} from "./vstsbuildstatusbar";
-import {Build, BuildDefinition, VstsBuildRestClient, VstsBuildRestClientFactory} from "./vstsbuildrestclient";
+import {Build, BuildDefinition, VstsBuildRestClient} from "./vstsbuildrestclient";
 import {VstsBuildLogStreamHandler} from "./vstsbuildlog";
 import * as openurl from "openurl";
 
@@ -31,10 +31,10 @@ export class VstsBuildStatus {
     private restClient: VstsBuildRestClient;
     private logStreamHandler: VstsBuildLogStreamHandler;
 
-    constructor(settings: Settings, restClientFactory: VstsBuildRestClientFactory) {
+    constructor(settings: Settings, restClient: VstsBuildRestClient) {
         this.settings = settings;
         this.statusBar = new VstsBuildStatusBar();
-        this.restClient = restClientFactory.createClient(settings);
+        this.restClient = restClient;
         this.activeDefinitions = settings.activeBuildDefinitions;
         this.logStreamHandler = new VstsBuildLogStreamHandler(this.restClient);
 

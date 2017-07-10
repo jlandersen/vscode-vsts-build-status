@@ -49,16 +49,6 @@ export class HttpResponse<T> {
     }
 }
 
-export interface VstsBuildRestClientFactory {
-    createClient(settings: Settings): VstsBuildRestClient;
-}
-
-export class VstsBuildRestClientFactoryImpl implements VstsBuildRestClientFactory {
-    public createClient(settings: Settings): VstsBuildRestClient {
-        return new VstsBuildRestClientImpl(settings);
-    }
-}
-
 export interface VstsBuildRestClient {
     getBuilds(definitions: BuildDefinition[], take: number): Promise<HttpResponse<Build[]>>;
     getBuild(buildId: number): Promise<HttpResponse<Build>>;
@@ -67,7 +57,7 @@ export interface VstsBuildRestClient {
     queueBuild(definitionId: number, sourceBranch?: string): Promise<HttpResponse<QueueBuildResult>>;
 }
 
-class VstsBuildRestClientImpl implements VstsBuildRestClient {
+export class VstsBuildRestClientImpl implements VstsBuildRestClient {
     private static emptyHttpResponse = new HttpResponse(200, null);
     private settings: Settings;
 

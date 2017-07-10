@@ -3,10 +3,11 @@
 import * as vscode from 'vscode';
 import {WorkspaceVstsSettings} from './settings'
 import {VstsBuildStatus} from './vstsbuildstatus'
-import {VstsBuildRestClientFactoryImpl} from './vstsbuildrestclient'
+import {VstsBuildRestClientImpl} from './vstsbuildrestclient'
 
 export function activate(context: vscode.ExtensionContext) {
-    var buildServiceStatus = new VstsBuildStatus(new WorkspaceVstsSettings(context.workspaceState), new VstsBuildRestClientFactoryImpl());
+    let settings = new WorkspaceVstsSettings(context.workspaceState);
+    let buildServiceStatus = new VstsBuildStatus(settings, new VstsBuildRestClientImpl(settings));
     
     context.subscriptions.push(
         vscode.commands.registerCommand('extension.openVstsBuildDefinitionSelection', () => buildServiceStatus.openBuildDefinitionSelection()));
