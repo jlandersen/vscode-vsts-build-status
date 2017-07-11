@@ -1,4 +1,4 @@
-import {window, QuickPickItem} from "vscode";
+import {window} from "vscode";
 import * as openurl from "openurl";
 
 import {VstsBuildRestClient} from "../vstsbuildrestclient";
