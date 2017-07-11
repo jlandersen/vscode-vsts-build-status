@@ -4,7 +4,6 @@ import {window, OutputChannel, QuickPickItem} from "vscode";
 import {Settings} from "./settings";
 import {VstsBuildStatusBar} from "./vstsbuildstatusbar";
 import {Build, BuildDefinition, VstsBuildRestClient} from "./vstsbuildrestclient";
-import {VstsBuildLogStreamHandler} from "./vstsbuildlog";
 import {BuildQuickPicker} from "./components/BuildQuickPicker";
 
 export class VstsBuildStatus {
@@ -16,7 +15,6 @@ export class VstsBuildStatus {
     private settings: Settings;
     private intervalTimer: NodeJS.Timer;
     private restClient: VstsBuildRestClient;
-    private logStreamHandler: VstsBuildLogStreamHandler;
 
     constructor(settings: Settings, restClient: VstsBuildRestClient) {
         this.settings = settings;
@@ -24,7 +22,6 @@ export class VstsBuildStatus {
         this.buildQuickPicker = new BuildQuickPicker(settings, restClient);
         this.restClient = restClient;
         this.activeDefinitions = settings.activeBuildDefinitions;
-        this.logStreamHandler = new VstsBuildLogStreamHandler(this.restClient);
 
         this.settings.onDidChangeSettings(() => {
             this.beginBuildStatusUpdates();
@@ -106,32 +103,6 @@ export class VstsBuildStatus {
             });
     }
 
-    public openBuildLogSelection(): void {
-        this.buildQuickPicker.showBuildDefinitionQuickPick("Select a build definition")
-            .then(result => {
-                if (!result) {
-                    return;
-                }
-
-                if (result.length > 1) {
-                    window.showInformationMessage(`Viewing group build is not possible, please select single build instead.`);
-                    return;
-                }
-
-                return this.buildQuickPicker.showBuildQuickPick(result[0].id, "Select a build to view");
-            })
-            .then(build => {
-                if (!build) {
-                    return;
-                }
-
-                this.logStreamHandler.streamLogs(build);
-            })
-            .catch(error => {
-                this.handleError();
-            });
-    }
-
     public openQueueBuildSelection(): void {
         if (!this.settings.isValid()) {
             this.showSettingsMissingMessage();
@@ -204,9 +175,5 @@ export class VstsBuildStatus {
     public dispose() {
         this.statusBar.dispose();
         this.settings.dispose();
-
-        if (this.logStreamHandler) {
-            this.logStreamHandler.dispose();
-        }
     }
 }

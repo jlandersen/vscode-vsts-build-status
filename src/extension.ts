@@ -1,10 +1,11 @@
 "use strict";
 
-import * as vscode from 'vscode';
-import {WorkspaceVstsSettings} from './settings'
-import {VstsBuildStatus} from './vstsbuildstatus'
-import {VstsBuildRestClientImpl} from './vstsbuildrestclient'
-import OpenBuildInBrowserCommand from './commands/OpenBuildInBrowserCommand';
+import * as vscode from "vscode";
+import {WorkspaceVstsSettings} from "./settings";
+import {VstsBuildStatus} from "./vstsbuildstatus";
+import {VstsBuildRestClientImpl} from "./vstsbuildrestclient";
+import OpenBuildInBrowserCommand from "./commands/OpenBuildInBrowserCommand";
+import OpenBuildLogCommand from "./commands/OpenBuildLogCommand";
 
 export function activate(context: vscode.ExtensionContext) {
     let settings = new WorkspaceVstsSettings(context.workspaceState);
@@ -12,6 +13,7 @@ export function activate(context: vscode.ExtensionContext) {
     let buildServiceStatus = new VstsBuildStatus(settings, restClient);
 
     let openBuildInBrowserCommand = new OpenBuildInBrowserCommand(settings, restClient);
+    let openBuildLogCommand = new OpenBuildLogCommand(settings, restClient);
     
     context.subscriptions.push(
         vscode.commands.registerCommand('extension.openVstsBuildDefinitionSelection', () => buildServiceStatus.openBuildDefinitionSelection()));
@@ -20,7 +22,7 @@ export function activate(context: vscode.ExtensionContext) {
         vscode.commands.registerCommand('extension.openVstsBuildWebSelection', () => openBuildInBrowserCommand.execute()));
 
     context.subscriptions.push(
-        vscode.commands.registerCommand('extension.openVstsBuildLogSelection', () => buildServiceStatus.openBuildLogSelection()));
+        vscode.commands.registerCommand('extension.openVstsBuildLogSelection', () => openBuildLogCommand.execute()));
         
     context.subscriptions.push(
         vscode.commands.registerCommand('extension.openVstsQueueBuildSelection', () => buildServiceStatus.openQueueBuildSelection()));
