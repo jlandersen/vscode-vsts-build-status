@@ -86,24 +86,6 @@ export class VstsBuildStatus {
             });
     }
 
-    public openBuildDefinitionSelection(): void {
-        if (!this.settings.isValid()) {
-            this.showSettingsMissingMessage();
-        }
-
-        this.buildQuickPicker.showBuildDefinitionQuickPick("Select a build definition to monitor")
-            .then(result => {
-                if (result) {
-                    this.activeDefinitions = result;
-                    this.settings.activeBuildDefinitions = this.activeDefinitions;
-                    this.updateStatus();
-                }
-            })
-            .catch(error => {
-              this.handleError();
-            });
-    }
-
     private handleError(): void {
         this.showConnectionErrorMessage();
         this.tryCancelPeriodicStatusUpdate();

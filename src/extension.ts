@@ -7,6 +7,7 @@ import {VstsBuildRestClientImpl} from "./vstsbuildrestclient";
 import OpenBuildInBrowserCommand from "./commands/OpenBuildInBrowserCommand";
 import OpenBuildLogCommand from "./commands/OpenBuildLogCommand";
 import QueueBuildCommand from "./commands/QueueBuildCommand";
+import SelectBuildDefinitionCommand from "./commands/SelectBuildDefinitionCommand";
 
 export function activate(context: vscode.ExtensionContext) {
     let settings = new WorkspaceVstsSettings(context.workspaceState);
@@ -16,9 +17,10 @@ export function activate(context: vscode.ExtensionContext) {
     let openBuildInBrowserCommand = new OpenBuildInBrowserCommand(settings, restClient);
     let openBuildLogCommand = new OpenBuildLogCommand(settings, restClient);
     let queueBuildCommand = new QueueBuildCommand(settings, restClient);
+    let selectBuildDefinitionCommand = new SelectBuildDefinitionCommand(settings, restClient);
     
     context.subscriptions.push(
-        vscode.commands.registerCommand('extension.openVstsBuildDefinitionSelection', () => buildServiceStatus.openBuildDefinitionSelection()));
+        vscode.commands.registerCommand('extension.openVstsBuildDefinitionSelection', () => selectBuildDefinitionCommand.execute()));
     
     context.subscriptions.push(
         vscode.commands.registerCommand('extension.openVstsBuildWebSelection', () => openBuildInBrowserCommand.execute()));

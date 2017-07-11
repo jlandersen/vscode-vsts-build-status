@@ -57,6 +57,10 @@ export class WorkspaceVstsSettings implements Settings {
     set activeBuildDefinitions(definitions: BuildDefinition[]) {
         this._activeBuildDefinitions = definitions;
         this.state.update(this.activeBuildDefinitionsStateKey, definitions);
+
+        if (this.onDidChangeSettingsHandler) {
+            this.onDidChangeSettingsHandler();
+        }
     }
 
     public onDidChangeSettings(handler: () => any): void {
