@@ -24,6 +24,7 @@ export class VstsBuildStatus {
         this.activeDefinitions = settings.activeBuildDefinitions;
 
         this.settings.onDidChangeSettings(() => {
+            this.activeDefinitions = this.settings.activeBuildDefinitions;    
             this.beginBuildStatusUpdates();
         });
 
@@ -100,48 +101,6 @@ export class VstsBuildStatus {
             })
             .catch(error => {
               this.handleError();
-            });
-    }
-
-    public openQueueBuildSelection(): void {
-        if (!this.settings.isValid()) {
-            this.showSettingsMissingMessage();
-            return;
-        }
-
-        let getBuildDefinition = this.buildQuickPicker.showBuildDefinitionQuickPick("Select a build definition");
-        let getBranch = getBuildDefinition.then(_ => {
-                return window.showInputBox({ prompt: "Branch (leave empty to use default) ?" });
-        });
-
-        Promise.all([getBuildDefinition, getBranch])
-            .then((result: [BuildDefinition[], string]) => {
-                let selectedBuildDefinition = result[0];
-                let selectedBranch = result[1];
-
-                if (!selectedBuildDefinition) {
-                    return Promise.reject(null);
-                }
-
-                if (selectedBuildDefinition.length > 1) {
-                    window.showInformationMessage(`Queueing group build is not possible, please queue single builds one-by-one instead.`);
-                    return Promise.reject(null);
-                }
-
-                if (selectedBranch === undefined) {
-                    return Promise.reject(null);
-                }
-
-                return this.restClient.queueBuild(selectedBuildDefinition[0].id, selectedBranch);
-            })
-            .then(result => {
-                window.showInformationMessage(`Build has been queued for ${result.value.definition.name}`);
-            })
-            .catch(error => {
-                if (error) {
-                    this.handleError();
-                }
-                // Otherwise has been cancelled by the user
             });
     }
 
