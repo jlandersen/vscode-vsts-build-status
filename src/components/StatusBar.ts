@@ -2,7 +2,7 @@
 
 import {window, StatusBarItem, StatusBarAlignment, Disposable} from "vscode"
 
-export class VstsBuildStatusBar {
+export class StatusBar {
     private statusBarItem: StatusBarItem;
 
     public displaySuccess(text: string, tooltip: string): void {

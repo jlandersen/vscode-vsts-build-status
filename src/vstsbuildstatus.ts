@@ -2,13 +2,13 @@
 
 import {window, OutputChannel, QuickPickItem} from "vscode";
 import {Settings} from "./settings";
-import {VstsBuildStatusBar} from "./vstsbuildstatusbar";
+import {StatusBar} from "./components/StatusBar";
 import {Build, BuildDefinition, VstsBuildRestClient} from "./vstsbuildrestclient";
 import {BuildQuickPicker} from "./components/BuildQuickPicker";
 
 export class VstsBuildStatus {
     private updateIntervalInSeconds = 15;
-    private statusBar: VstsBuildStatusBar;
+    private statusBar: StatusBar;
     private buildQuickPicker: BuildQuickPicker;
 
     private activeDefinitions: BuildDefinition[];
@@ -18,7 +18,7 @@ export class VstsBuildStatus {
 
     constructor(settings: Settings, restClient: VstsBuildRestClient) {
         this.settings = settings;
-        this.statusBar = new VstsBuildStatusBar();
+        this.statusBar = new StatusBar();
         this.buildQuickPicker = new BuildQuickPicker(settings, restClient);
         this.restClient = restClient;
         this.activeDefinitions = settings.activeBuildDefinitions;
