@@ -54,7 +54,9 @@ export class BuildLogViewer {
 
                 this.outputChannel.appendLine("(VSTS Build Agent Status extension) End of build log")
             } else if (build.value.status !== "completed" && !this.intervalTimer) {
-                this.intervalTimer = setInterval(() => this.getNext(buildId), this.updateIntervalInSeconds * 1000);
+                this.intervalTimer = setInterval(
+                    () => this.getNext(buildId), 
+                    this.updateIntervalInSeconds * 1000);
             }
         });
     }
