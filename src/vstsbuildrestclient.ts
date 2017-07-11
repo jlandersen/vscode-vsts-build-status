@@ -50,7 +50,7 @@ export class HttpResponse<T> {
 }
 
 export interface VstsBuildRestClient {
-    getBuilds(definitions: BuildDefinition[], take: number): Promise<HttpResponse<Build[]>>;
+    getBuilds(definitionIds: number[], take: number): Promise<HttpResponse<Build[]>>;
     getBuild(buildId: number): Promise<HttpResponse<Build>>;
     getLog(build: Build): Promise<HttpResponse<BuildLog>>;
     getDefinitions(): Promise<HttpResponse<BuildDefinition[]>>;
@@ -65,9 +65,9 @@ export class VstsBuildRestClientImpl implements VstsBuildRestClient {
         this.settings = settings;
     }
 
-    public getBuilds(definitions: BuildDefinition[], take: number = 5): Promise<HttpResponse<Build[]>> {
-        let url = `https://${this.settings.account}.visualstudio.com/DefaultCollection/${this.settings.project}/_apis/build/builds?definitions=${definitions.map(d => d.id).join(',')}&$top=${take}&api-version=2.0`;
-        if (definitions.length > 1) { // Return single build per definition, if grouped build definitions were queried
+    public getBuilds(definitionIds: number[], take: number = 5): Promise<HttpResponse<Build[]>> {
+        let url = `https://${this.settings.account}.visualstudio.com/DefaultCollection/${this.settings.project}/_apis/build/builds?definitions=${definitionIds.join(',')}&$top=${take}&api-version=2.0`;
+        if (definitionIds.length > 1) { // Return single build per definition, if grouped build definitions were queried
             url += `&maxBuildsPerDefinition=1`;
         }
 

@@ -5,25 +5,12 @@ import {Settings} from "./settings";
 import {VstsBuildStatusBar} from "./vstsbuildstatusbar";
 import {Build, BuildDefinition, VstsBuildRestClient} from "./vstsbuildrestclient";
 import {VstsBuildLogStreamHandler} from "./vstsbuildlog";
-import * as openurl from "openurl";
-
-interface BuildDefinitionQuickPickItem {
-    ids: number[];
-    label: string;
-    description: string;
-    definitions: BuildDefinition[];
-}
-
-interface BuildQuickPickItem {
-    id: number;
-    label: string;
-    description: string;
-    build: Build;
-}
+import {BuildQuickPicker} from "./components/BuildQuickPicker";
 
 export class VstsBuildStatus {
     private updateIntervalInSeconds = 15;
     private statusBar: VstsBuildStatusBar;
+    private buildQuickPicker: BuildQuickPicker;
 
     private activeDefinitions: BuildDefinition[];
     private settings: Settings;
@@ -34,6 +21,7 @@ export class VstsBuildStatus {
     constructor(settings: Settings, restClient: VstsBuildRestClient) {
         this.settings = settings;
         this.statusBar = new VstsBuildStatusBar();
+        this.buildQuickPicker = new BuildQuickPicker(settings, restClient);
         this.restClient = restClient;
         this.activeDefinitions = settings.activeBuildDefinitions;
         this.logStreamHandler = new VstsBuildLogStreamHandler(this.restClient);
@@ -66,7 +54,7 @@ export class VstsBuildStatus {
             return;
         }
 
-        this.restClient.getBuilds(this.activeDefinitions, this.activeDefinitions.length).then(
+        this.restClient.getBuilds(this.activeDefinitions.map(d => d.id), this.activeDefinitions.length).then(
             response => {
                 const definitionName = this.settings.definitionsGroupName && this.activeDefinitions.length > 1 ? this.settings.definitionsGroupName : this.activeDefinitions[0].name;
 
@@ -101,61 +89,56 @@ export class VstsBuildStatus {
     }
 
     public openBuildDefinitionSelection(): void {
-        this.getBuildDefinitionByQuickPick("Select a build definition to monitor").then(result => {
-            if (result) {
-                this.activeDefinitions = result;
-                this.settings.activeBuildDefinitions = this.activeDefinitions;
-                this.updateStatus();
-            }
-        }, error => {
-            this.handleError();
-        });
-    }
+        if (!this.settings.isValid()) {
+            this.showSettingsMissingMessage();
+        }
 
-    public openBuildWebSelection(): void {
-        this.getBuildDefinitionByQuickPick("Select a build definition").then(result => {
-            if (!result) {
-                return;
-            }
-            if (result.length > 1) {
-                window.showInformationMessage(`Group build definition cannot be opened, please select single one instead.`);
-                return;
-            }
-
-            return this.getBuildByQuickPick(result[0], "Select a build to open").then(build => build);
-        }).then(build => {
-            if (!build) {
-                return;
-            }
-
-            openurl.open(build._links.web.href);
-        });
+        this.buildQuickPicker.showBuildDefinitionQuickPick("Select a build definition to monitor")
+            .then(result => {
+                if (result) {
+                    this.activeDefinitions = result;
+                    this.settings.activeBuildDefinitions = this.activeDefinitions;
+                    this.updateStatus();
+                }
+            })
+            .catch(error => {
+              this.handleError();
+            });
     }
 
     public openBuildLogSelection(): void {
-        this.getBuildDefinitionByQuickPick("Select a build definition").then(result => {
-            if (!result) {
-                return;
-            }
-            if (result.length > 1) {
-                window.showInformationMessage(`Viewing group build is not possible, please select single build instead.`);
-                return;
-            }
+        this.buildQuickPicker.showBuildDefinitionQuickPick("Select a build definition")
+            .then(result => {
+                if (!result) {
+                    return;
+                }
 
-            return this.getBuildByQuickPick(result[0], "Select a build to view").then(build => build);
-        }).then(build => {
-            if (!build) {
-                return;
-            }
+                if (result.length > 1) {
+                    window.showInformationMessage(`Viewing group build is not possible, please select single build instead.`);
+                    return;
+                }
 
-            this.logStreamHandler.streamLogs(build);
-        }, error => {
-            this.handleError();
-        });
+                return this.buildQuickPicker.showBuildQuickPick(result[0].id, "Select a build to view");
+            })
+            .then(build => {
+                if (!build) {
+                    return;
+                }
+
+                this.logStreamHandler.streamLogs(build);
+            })
+            .catch(error => {
+                this.handleError();
+            });
     }
 
     public openQueueBuildSelection(): void {
-        let getBuildDefinition = this.getBuildDefinitionByQuickPick("Select a build definition");
+        if (!this.settings.isValid()) {
+            this.showSettingsMissingMessage();
+            return;
+        }
+
+        let getBuildDefinition = this.buildQuickPicker.showBuildDefinitionQuickPick("Select a build definition");
         let getBranch = getBuildDefinition.then(_ => {
                 return window.showInputBox({ prompt: "Branch (leave empty to use default) ?" });
         });
@@ -189,75 +172,6 @@ export class VstsBuildStatus {
                 }
                 // Otherwise has been cancelled by the user
             });
-    }
-
-    private getBuildDefinitionByQuickPick(placeHolder: string): Promise<BuildDefinition[]> {
-        if (!this.settings.isValid()) {
-            this.showSettingsMissingMessage();
-
-            return Promise.resolve<BuildDefinition[]>(null);
-        }
-
-        return new Promise((resolve, reject) => {
-            this.restClient.getDefinitions().then(response => {
-                let buildDefinitions: BuildDefinitionQuickPickItem[] = response.value.map(function (definition) {
-                    return {
-                        label: definition.name,
-                        description: `Revision ${definition.revision}`,
-                        ids: [definition.id],
-                        definitions: [definition]
-                    }
-                });
-
-                if (this.settings.definitionsGroup) {
-                    buildDefinitions.push({
-                            label: this.settings.definitionsGroupName ? this.settings.definitionsGroupName : this.settings.definitionsGroup.map(b => b.id.toString()).join(','),
-                            description: 'Grouped Build Definition',
-                            ids: this.settings.definitionsGroup.map(b => b.id),
-                            definitions: this.settings.definitionsGroup
-                    });
-                }
-
-                let options = {
-                    placeHolder: placeHolder
-                };
-
-                window.showQuickPick(buildDefinitions, options).then(result => {
-                    if (result) {
-                        resolve(result.definitions);
-                    } else {
-                        resolve(null);
-                    }
-                });
-            }, error => {
-                reject(error);
-            });
-        });
-    }
-
-    private getBuildByQuickPick(definition: BuildDefinition, placeHolder: string): Thenable<Build> {
-        return this.restClient.getBuilds([definition], 10).then(builds => {
-            let buildQuickPickItems: BuildQuickPickItem[] = builds.value.map(build => {
-                return {
-                    label: new Date(build.queueTime).toLocaleString(),
-                    description: build.result,
-                    id: build.id,
-                    build: build
-                };
-            });
-
-            let options = {
-                placeHolder: placeHolder
-            };
-
-            return window.showQuickPick(buildQuickPickItems, options).then(result => {
-                if (result) {
-                    return result.build;
-                } else {
-                    return null;
-                }
-            });
-        });
     }
 
     private handleError(): void {
