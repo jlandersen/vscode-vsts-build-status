@@ -96,10 +96,6 @@ export class VstsBuildStatus {
         window.showErrorMessage(`Unable to connect to the VSTS account ${this.settings.account}`);
     }
 
-    private showSettingsMissingMessage() {
-        window.showInformationMessage("Account, project and password/Personal Access Token must be provided in user or workspace settings.")
-    }
-
     private tryStartPeriodicStatusUpdate(): void {
         if (!this.intervalTimer) {
             this.intervalTimer = setInterval(() => this.updateStatus(), this.updateIntervalInSeconds * 1000);
