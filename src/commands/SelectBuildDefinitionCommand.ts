@@ -1,6 +1,7 @@
 import {VstsBuildRestClient} from "../vstsbuildrestclient";
 import {Settings} from "../settings";
 import {BuildQuickPicker} from "../components/BuildQuickPicker";
+import {validateSettings, handleError} from "./Decorators";
 
 export default class SelectBuildDefinitionCommand {
     private buildQuickPicker: BuildQuickPicker;
@@ -9,15 +10,14 @@ export default class SelectBuildDefinitionCommand {
         this.buildQuickPicker = new BuildQuickPicker(settings, restClient);
     }
 
-    public execute() {
-        this.buildQuickPicker.showBuildDefinitionQuickPick("Select a build definition to monitor")
+    @validateSettings
+    @handleError
+    public execute(): Promise<any> {
+        return this.buildQuickPicker.showBuildDefinitionQuickPick("Select a build definition to monitor")
             .then(result => {
                 if (result) {
                     this.settings.activeBuildDefinitions = result;
                 }
             })
-            .catch(error => {
-                // Handle error
-            });
     }
 }

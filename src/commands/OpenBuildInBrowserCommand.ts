@@ -1,9 +1,9 @@
 import {window} from "vscode";
 import * as openurl from "openurl";
-
 import {VstsBuildRestClient} from "../vstsbuildrestclient";
 import {Settings} from "../settings";
 import {BuildQuickPicker} from "../components/BuildQuickPicker";
+import {validateSettings, handleError} from "./Decorators";
 
 export default class OpenBuildInBrowserCommand {
     private buildQuickPicker: BuildQuickPicker;
@@ -11,8 +11,10 @@ export default class OpenBuildInBrowserCommand {
         this.buildQuickPicker = new BuildQuickPicker(settings, restClient);
     }
 
-    public execute() {
-        this.buildQuickPicker.showBuildDefinitionQuickPick("Select a build definition")
+    @validateSettings
+    @handleError
+    public execute(): Promise<any> {
+        return this.buildQuickPicker.showBuildDefinitionQuickPick("Select a build definition")
             .then(definition => {
                 if (!definition) {
                     return;

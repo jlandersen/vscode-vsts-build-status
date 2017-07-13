@@ -2,6 +2,7 @@ import {window} from "vscode";
 import {VstsBuildRestClient} from "../vstsbuildrestclient";
 import {Settings} from "../settings";
 import {BuildQuickPicker} from "../components/BuildQuickPicker";
+import {validateSettings, handleError} from "./Decorators";
 
 export default class QueueBuildCommand {
     private buildQuickPicker: BuildQuickPicker;
@@ -9,41 +10,41 @@ export default class QueueBuildCommand {
         this.buildQuickPicker = new BuildQuickPicker(settings, restClient);
     }
 
-    public execute() {
+    @validateSettings
+    @handleError
+    public execute(): Promise<any> {
         let getBuildDefinition = this.buildQuickPicker.showBuildDefinitionQuickPick("Select a build definition");
         let getBranch = getBuildDefinition.then(_ => {
                 return window.showInputBox({ prompt: "Branch (leave empty to use default) ?" });
         });
 
-        Promise.all([getBuildDefinition, getBranch])
+        return Promise.all([getBuildDefinition, getBranch])
             .then(result => {
                 let selectedBuildDefinition = result[0];
                 let selectedBranch = result[1];
 
                 if (!selectedBuildDefinition) {
-                    return Promise.reject(null);
+                    return;
                 }
 
                 if (selectedBuildDefinition.length > 1) {
                     window.showInformationMessage(`Queueing group build is not possible, please queue single builds one-by-one instead.`);
-                    return Promise.reject(null);
+                    return;
                 }
 
                 if (selectedBranch === undefined) {
-                    return Promise.reject(null);
+                    return;
                 }
 
                 return this.restClient.queueBuild(selectedBuildDefinition[0].id, selectedBranch);
             })
             .then(result => {
-                window.showInformationMessage(`Build has been queued for ${result.value.definition.name}`);
-            })
-            .catch(error => {
-                if (error) {
-                    // handle error
+                if (!result) {
+                    // User cancelled
+                    return;
                 }
 
-                // Cancelled by user
+                window.showInformationMessage(`Build has been queued for ${result.value.definition.name}`);
             });
     }
 }

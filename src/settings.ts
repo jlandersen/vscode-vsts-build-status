@@ -17,7 +17,9 @@ export interface Settings {
     isValid(): boolean;
 }
 
-export class WorkspaceVstsSettings implements Settings {
+class WorkspaceVstsSettings implements Settings {
+    static instance: WorkspaceVstsSettings;
+
     account: string;
     username: string;
     password: string;
@@ -31,7 +33,7 @@ export class WorkspaceVstsSettings implements Settings {
     private workspaceSettingsChangedDisposable: Disposable;
     private onDidChangeSettingsHandler: () => any;
 
-    constructor(state: Memento) {
+    private constructor(state: Memento) {
         this.state = state;
 
         var definitions = state.get<BuildDefinition[]>(this.activeBuildDefinitionsStateKey);
@@ -69,6 +71,10 @@ export class WorkspaceVstsSettings implements Settings {
 
     public isValid(): boolean {
         return this.isAccountProvided() && this.isCredentialsProvided() && this.isProjectSpecified() && this.isBuildDefinitionsNameSpecified();
+    }
+
+    public static getInstance(state: Memento) {
+        return WorkspaceVstsSettings.instance || (WorkspaceVstsSettings.instance = new WorkspaceVstsSettings(state));
     }
 
     public dispose(): void {
@@ -134,4 +140,18 @@ export class WorkspaceVstsSettings implements Settings {
             this.activeBuildDefinitions = defList;
         }
     }
+}
+
+let settings: Settings = null;
+
+export function createDefaultSettings(state: Memento): Settings {
+    return settings = WorkspaceVstsSettings.getInstance(state);
+}
+
+export function getDefaultSettings(): Settings {
+    if (!settings) {
+        throw Error("No default settings created. Use createdDefaultSettings to register default settings.")
+    }
+
+    return settings;
 }

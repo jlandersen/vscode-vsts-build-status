@@ -3,6 +3,7 @@ import {VstsBuildRestClient} from "../vstsbuildrestclient";
 import {Settings} from "../settings";
 import {BuildQuickPicker} from "../components/BuildQuickPicker";
 import {BuildLogViewer} from "../components/BuildLogViewer";
+import {validateSettings, handleError} from "./Decorators";
 
 export default class OpenBuildLogCommand {
     private buildQuickPicker: BuildQuickPicker;
@@ -13,8 +14,10 @@ export default class OpenBuildLogCommand {
         this.logViewer = new BuildLogViewer(restClient);
     }
 
-    public execute() {
-        this.buildQuickPicker.showBuildDefinitionQuickPick("Select a build definition")
+    @validateSettings
+    @handleError
+    public execute(): Promise<any> {
+        return this.buildQuickPicker.showBuildDefinitionQuickPick("Select a build definition")
             .then(result => {
                 if (!result) {
                     return;

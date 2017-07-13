@@ -1,7 +1,7 @@
 "use strict";
 
 import * as vscode from "vscode";
-import {WorkspaceVstsSettings} from "./settings";
+import {createDefaultSettings} from "./settings";
 import {VstsBuildStatus} from "./vstsbuildstatus";
 import {VstsBuildRestClientImpl} from "./vstsbuildrestclient";
 import OpenBuildInBrowserCommand from "./commands/OpenBuildInBrowserCommand";
@@ -10,7 +10,7 @@ import QueueBuildCommand from "./commands/QueueBuildCommand";
 import SelectBuildDefinitionCommand from "./commands/SelectBuildDefinitionCommand";
 
 export function activate(context: vscode.ExtensionContext) {
-    let settings = new WorkspaceVstsSettings(context.workspaceState);
+    let settings = createDefaultSettings(context.workspaceState);
     let restClient = new VstsBuildRestClientImpl(settings);
     let buildServiceStatus = new VstsBuildStatus(settings, restClient);
 
