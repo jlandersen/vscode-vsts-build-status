@@ -40,12 +40,12 @@ interface QueueBuildResult {
 }
 
 export class HttpResponse<T> {
-    statusCode: number;
-    value: T;
+    constructor(private statusCode: number, private value: T) {
+    }
+}
 
-    constructor(statusCode: number, value: T) {
-        this.statusCode = statusCode;
-        this.value = value;
+export class HttpResponseError {
+    constructor(private statusCode: number, private error: string) {
     }
 }
 
