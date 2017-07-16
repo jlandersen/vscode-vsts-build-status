@@ -40,12 +40,17 @@ interface QueueBuildResult {
 }
 
 export class HttpResponse<T> {
-    constructor(private statusCode: number, private value: T) {
+    constructor(public statusCode: number, public value: T) {
     }
 }
 
+enum ErrorType {
+    Unknown,
+    Vsts
+}
+
 export class HttpResponseError {
-    constructor(private statusCode: number, private error: string) {
+    constructor(public statusCode: number, public errorType: ErrorType, public errorMessage: string) {
     }
 }
 
