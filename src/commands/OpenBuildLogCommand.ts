@@ -1,6 +1,6 @@
 import {window} from "vscode";
-import {VstsBuildRestClient} from "../vstsbuildrestclient";
-import {Settings} from "../settings";
+import {VstsRestClient} from "../VstsRestClient";
+import {Settings} from "../Settings";
 import {BuildQuickPicker} from "../components/BuildQuickPicker";
 import {BuildLogViewer} from "../components/BuildLogViewer";
 import {validateSettings, handleError} from "./Decorators";
@@ -9,7 +9,7 @@ export default class OpenBuildLogCommand {
     private buildQuickPicker: BuildQuickPicker;
     private logViewer: BuildLogViewer;
 
-    constructor(private settings: Settings, private restClient: VstsBuildRestClient) {
+    constructor(private settings: Settings, private restClient: VstsRestClient) {
         this.buildQuickPicker = new BuildQuickPicker(settings, restClient);
         this.logViewer = new BuildLogViewer(restClient);
     }

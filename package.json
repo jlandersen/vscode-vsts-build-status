@@ -46,7 +46,9 @@
         "@types/mocha": "^2.2.32",
         "@types/node": "^6.0.79",
         "@types/node-fetch": "^1.6.7",
+        "@types/sinon": "^2.3.2",
         "mocha": "^2.3.3",
+        "sinon": "^2.3.8",
         "typescript": "^2.4.1",
         "vscode": "^1.1.2"
     },

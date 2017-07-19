@@ -1,6 +1,6 @@
 import { window } from "vscode";
-import { Build, BuildDefinition, VstsBuildRestClient } from "../vstsbuildrestclient";
-import { Settings } from "../settings";
+import { Build, BuildDefinition, VstsRestClient } from "../VstsRestClient";
+import { Settings } from "../Settings";
 
 interface BuildDefinitionQuickPickItem {
     ids: number[];
@@ -17,7 +17,7 @@ interface BuildQuickPickItem {
 }
 
 export class BuildQuickPicker {
-    constructor(private settings: Settings, private restClient: VstsBuildRestClient) {
+    constructor(private settings: Settings, private restClient: VstsRestClient) {
     }
 
     private mapBuildDefinitionsToPickItems(buildDefinitions: BuildDefinition[]) {

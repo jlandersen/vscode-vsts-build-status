@@ -1,7 +1,5 @@
-"use strict";
-
 import {workspace, WorkspaceConfiguration, Memento, Disposable} from "vscode"
-import {BuildDefinition} from "./vstsbuildrestclient"
+import {BuildDefinition} from "./VstsRestClient"
 
 export interface Settings {
     account: string;
@@ -17,7 +15,7 @@ export interface Settings {
     isValid(): boolean;
 }
 
-class WorkspaceVstsSettings implements Settings {
+export class WorkspaceVstsSettings implements Settings {
     static instance: WorkspaceVstsSettings;
 
     account: string;
@@ -33,7 +31,7 @@ class WorkspaceVstsSettings implements Settings {
     private workspaceSettingsChangedDisposable: Disposable;
     private onDidChangeSettingsHandler: () => any;
 
-    private constructor(state: Memento) {
+    public constructor(state: Memento) {
         this.state = state;
 
         var definitions = state.get<BuildDefinition[]>(this.activeBuildDefinitionsStateKey);

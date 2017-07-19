@@ -1,7 +1,5 @@
-"use strict";
-
 import fetch, { Response, RequestInit } from "node-fetch";
-import { Settings } from "./settings";
+import {Settings} from "./Settings";
 
 export interface Build {
     id: number;
@@ -39,6 +37,18 @@ interface QueueBuildResult {
     definition: BuildDefinition;
 }
 
+interface VstsErrorResponse {
+    Message: string;
+    ValidationResults: {
+        message: string;
+        result: string;
+    }[];
+}
+
+function isVstsErrorResponse(object: any): object is VstsErrorResponse {
+    return "ValidationResults" in object;
+}
+
 export class HttpResponse<T> {
     constructor(public statusCode: number, public value: T) {
     }
@@ -52,9 +62,18 @@ enum ErrorType {
 export class HttpResponseError {
     constructor(public statusCode: number, public errorType: ErrorType, public errorMessage: string) {
     }
+
+    public isUnauthorizedError(): boolean {
+        return this.statusCode === 401;
+    }
 }
 
-export interface VstsBuildRestClient {
+export function isHttpResponseError(object: any): object is HttpResponseError {
+    return (<HttpResponseError>object).errorType !== undefined;
+}
+
+
+export interface VstsRestClient {
     getBuilds(definitionIds: number[], take: number): Promise<HttpResponse<Build[]>>;
     getBuild(buildId: number): Promise<HttpResponse<Build>>;
     getLog(build: Build): Promise<HttpResponse<BuildLog>>;
@@ -62,7 +81,7 @@ export interface VstsBuildRestClient {
     queueBuild(definitionId: number, sourceBranch?: string): Promise<HttpResponse<QueueBuildResult>>;
 }
 
-export class VstsBuildRestClientImpl implements VstsBuildRestClient {
+export class VstsRestClientImpl implements VstsRestClient {
     private static emptyHttpResponse = new HttpResponse(200, null);
     private settings: Settings;
 
@@ -151,19 +170,24 @@ export class VstsBuildRestClientImpl implements VstsBuildRestClient {
             }
         }
 
-        let request = fetch(url, args)
-            .then(res => {
-                if (res.status !== 200) {
-                    return Promise.reject("Status indicated non-OK result " + res.status);
-                }
+        let result = fetch(url, args);
+        let extractResult = result.then(result => {
+            if (result.status === 401) {
+                throw new HttpResponseError(result.status, ErrorType.Vsts, "Unauthorized");
+            }
 
-                return res.json<T>();
-            })
-            .then(value => {
-                return new HttpResponse(200, parser(value));
-            });
+            if (!result.ok) {
+                throw new HttpResponseError(result.status, ErrorType.Vsts, "VSTS request failed");
+            }
+            
+            return result.json<T>()
+        });
 
-        return request;
+        return Promise.all([result, extractResult]).then(result => {
+            let response = result[0];
+            let body = result[1];
+            return new HttpResponse(response.status, parser(body));
+        });
     }
 
     private post<T>(url: string, body: any): Promise<HttpResponse<T>> {
@@ -176,19 +200,28 @@ export class VstsBuildRestClientImpl implements VstsBuildRestClient {
             }
         };
 
-        let request = fetch(url, args)
-            .then(res => {
-                if (res.status !== 200) {
-                    return Promise.reject("Status indicated non-OK result " + res.status);
-                }
+        let result = fetch(url, args);
+        let extractResult = result.then(result => {
+            if (result.status === 401) {
+                throw new HttpResponseError(result.status, ErrorType.Vsts, "Unauthorized");
+            }
+            
+            return result.json<T>()
+        });
 
-                return res.json<T>();
-            })
-            .then(value => {
-                return new HttpResponse(200, value);
-            });
+        return Promise.all([result, extractResult]).then(result => {
+            let response = result[0];
+            let body = result[1];
+            
+            if (!response.ok && isVstsErrorResponse(body)) {
+                let errors = body.ValidationResults.filter(v => v.result !== "ok");
+                throw new HttpResponseError(response.status, ErrorType.Vsts, errors[0].message);
+            } else if (!response.ok) {
+                throw new HttpResponseError(0, ErrorType.Unknown, "Unknown error");
+            }
 
-        return request;
+            return new HttpResponse(response.status, body);
+        });
     }
 
     private getAuthorizationHeaderValue(): string {

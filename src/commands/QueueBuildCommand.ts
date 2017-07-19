@@ -1,12 +1,12 @@
 import {window} from "vscode";
-import {VstsBuildRestClient} from "../vstsbuildrestclient";
-import {Settings} from "../settings";
+import {VstsRestClient, isHttpResponseError} from "../VstsRestClient";
+import {Settings} from "../Settings";
 import {BuildQuickPicker} from "../components/BuildQuickPicker";
 import {validateSettings, handleError} from "./Decorators";
 
 export default class QueueBuildCommand {
     private buildQuickPicker: BuildQuickPicker;
-    constructor(private settings: Settings, private restClient: VstsBuildRestClient) {
+    constructor(private settings: Settings, private restClient: VstsRestClient) {
         this.buildQuickPicker = new BuildQuickPicker(settings, restClient);
     }
 
@@ -15,7 +15,7 @@ export default class QueueBuildCommand {
     public execute(): Promise<any> {
         let getBuildDefinition = this.buildQuickPicker.showBuildDefinitionQuickPick("Select a build definition");
         let getBranch = getBuildDefinition.then(_ => {
-                return window.showInputBox({ prompt: "Branch (leave empty to use default) ?" });
+            return window.showInputBox({ prompt: "Branch (leave empty to use default) ?" });
         });
 
         return Promise.all([getBuildDefinition, getBranch])
@@ -45,6 +45,13 @@ export default class QueueBuildCommand {
                 }
 
                 window.showInformationMessage(`Build has been queued for ${result.value.definition.name}`);
+            })
+            .catch(error => {
+                if (!isHttpResponseError(error) || error.isUnauthorizedError()) {
+                    return Promise.reject(error);
+                }
+
+                window.showErrorMessage(`Unable to queue build (status code ${error.statusCode}): ${error.errorMessage}`);
             });
     }
 }

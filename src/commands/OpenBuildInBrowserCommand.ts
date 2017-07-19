@@ -1,13 +1,13 @@
 import {window} from "vscode";
 import * as openurl from "openurl";
-import {VstsBuildRestClient} from "../vstsbuildrestclient";
-import {Settings} from "../settings";
+import {VstsRestClient} from "../VstsRestClient";
+import {Settings} from "../Settings";
 import {BuildQuickPicker} from "../components/BuildQuickPicker";
 import {validateSettings, handleError} from "./Decorators";
 
 export default class OpenBuildInBrowserCommand {
     private buildQuickPicker: BuildQuickPicker;
-    constructor(private settings: Settings, private restClient: VstsBuildRestClient) {
+    constructor(private settings: Settings, private restClient: VstsRestClient) {
         this.buildQuickPicker = new BuildQuickPicker(settings, restClient);
     }
 

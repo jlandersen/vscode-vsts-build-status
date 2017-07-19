@@ -1,8 +1,5 @@
-"use strict";
-
 import {window, OutputChannel} from "vscode";
-import {VstsBuildRestClient} from "../vstsbuildrestclient";
-
+import {VstsRestClient} from "../VstsRestClient";
 
 export class BuildLogViewer {
     private outputChannel: OutputChannel;
@@ -10,7 +7,7 @@ export class BuildLogViewer {
     private updateIntervalInSeconds: number = 5;
     private currentLogIndex: number = 0;
 
-    constructor(private restClient: VstsBuildRestClient) {
+    constructor(private restClient: VstsRestClient) {
     }
 
     public viewLog(buildId: number) {

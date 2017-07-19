@@ -1,9 +1,7 @@
-"use strict";
-
 import * as vscode from "vscode";
-import {createDefaultSettings} from "./settings";
-import {VstsBuildStatus} from "./vstsbuildstatus";
-import {VstsBuildRestClientImpl} from "./vstsbuildrestclient";
+import {createDefaultSettings, WorkspaceVstsSettings} from "./Settings";
+import {StatusMonitor} from "./StatusMonitor";
+import {VstsRestClientImpl} from "./VstsRestClient";
 import OpenBuildInBrowserCommand from "./commands/OpenBuildInBrowserCommand";
 import OpenBuildLogCommand from "./commands/OpenBuildLogCommand";
 import QueueBuildCommand from "./commands/QueueBuildCommand";
@@ -11,13 +9,14 @@ import SelectBuildDefinitionCommand from "./commands/SelectBuildDefinitionComman
 
 export function activate(context: vscode.ExtensionContext) {
     let settings = createDefaultSettings(context.workspaceState);
-    let restClient = new VstsBuildRestClientImpl(settings);
-    let buildServiceStatus = new VstsBuildStatus(settings, restClient);
-
+    let restClient = new VstsRestClientImpl(settings);
     let openBuildInBrowserCommand = new OpenBuildInBrowserCommand(settings, restClient);
     let openBuildLogCommand = new OpenBuildLogCommand(settings, restClient);
     let queueBuildCommand = new QueueBuildCommand(settings, restClient);
     let selectBuildDefinitionCommand = new SelectBuildDefinitionCommand(settings, restClient);
+    let statusMonitor = new StatusMonitor(settings, restClient);
+
+    statusMonitor.begin();
     
     context.subscriptions.push(
         vscode.commands.registerCommand('extension.openVstsBuildDefinitionSelection', () => selectBuildDefinitionCommand.execute()));

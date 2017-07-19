@@ -1,12 +1,10 @@
-"use strict";
-
 import {window, OutputChannel, QuickPickItem} from "vscode";
-import {Settings} from "./settings";
+import {Settings} from "./Settings";
 import {StatusBar} from "./components/StatusBar";
-import {Build, BuildDefinition, VstsBuildRestClient} from "./vstsbuildrestclient";
+import {Build, BuildDefinition, VstsRestClient} from "./VstsRestClient";
 import {BuildQuickPicker} from "./components/BuildQuickPicker";
 
-export class VstsBuildStatus {
+export class StatusMonitor {
     private updateIntervalInSeconds = 15;
     private statusBar: StatusBar;
     private buildQuickPicker: BuildQuickPicker;
@@ -14,9 +12,9 @@ export class VstsBuildStatus {
     private activeDefinitions: BuildDefinition[];
     private settings: Settings;
     private intervalTimer: NodeJS.Timer;
-    private restClient: VstsBuildRestClient;
+    private restClient: VstsRestClient;
 
-    constructor(settings: Settings, restClient: VstsBuildRestClient) {
+    constructor(settings: Settings, restClient: VstsRestClient) {
         this.settings = settings;
         this.statusBar = new StatusBar();
         this.buildQuickPicker = new BuildQuickPicker(settings, restClient);
@@ -24,19 +22,21 @@ export class VstsBuildStatus {
         this.activeDefinitions = settings.activeBuildDefinitions;
 
         this.settings.onDidChangeSettings(() => {
-            this.activeDefinitions = this.settings.activeBuildDefinitions;    
-            this.beginBuildStatusUpdates();
+            this.activeDefinitions = this.settings.activeBuildDefinitions;
+            this.begin();
         });
-
-        this.beginBuildStatusUpdates();
     }
 
-    private beginBuildStatusUpdates() {
+    public begin() {
         this.tryCancelPeriodicStatusUpdate();
         this.updateStatus();
     }
 
-    public updateStatus(): void {
+    public stop() {
+        this.tryCancelPeriodicStatusUpdate();
+    }
+
+    public updateStatus(): Promise<void> {
         // Updates the status bar depending on the state. 
         // If everything goes well, the method is set up to be called periodically.
 
@@ -52,7 +52,7 @@ export class VstsBuildStatus {
             return;
         }
 
-        this.restClient.getBuilds(this.activeDefinitions.map(d => d.id), this.activeDefinitions.length).then(
+        return this.restClient.getBuilds(this.activeDefinitions.map(d => d.id), this.activeDefinitions.length).then(
             response => {
                 const definitionName = this.settings.definitionsGroupName && this.activeDefinitions.length > 1 ? this.settings.definitionsGroupName : this.activeDefinitions[0].name;
 
@@ -86,23 +86,23 @@ export class VstsBuildStatus {
             });
     }
 
-    private handleError(): void {
+    private handleError() {
         this.showConnectionErrorMessage();
         this.tryCancelPeriodicStatusUpdate();
     }
 
-    private showConnectionErrorMessage(): void {
+    private showConnectionErrorMessage() {
         this.statusBar.displayConnectivityError("Unable to connect", "There was a problem trying to connect to your VSTS account");
         window.showErrorMessage(`Unable to connect to the VSTS account ${this.settings.account}`);
     }
 
-    private tryStartPeriodicStatusUpdate(): void {
+    private tryStartPeriodicStatusUpdate() {
         if (!this.intervalTimer) {
             this.intervalTimer = setInterval(() => this.updateStatus(), this.updateIntervalInSeconds * 1000);
         }
     }
 
-    private tryCancelPeriodicStatusUpdate(): void {
+    private tryCancelPeriodicStatusUpdate() {
         if (this.intervalTimer) {
             clearInterval(this.intervalTimer);
             this.intervalTimer = null;
