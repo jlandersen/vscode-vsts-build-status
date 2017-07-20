@@ -27,6 +27,10 @@ export class StatusBar {
         this.displayStatusBarItem(text, tooltip, "octicon-zap");
     }
 
+    public displayConnecting(text: string, tooltip: string): void {
+        this.displayStatusBarItem(text, tooltip, "octicon-plug");
+    }
+
     public hideStatusBarItem() {
         if (this.statusBarItem) {
             this.statusBarItem.hide();

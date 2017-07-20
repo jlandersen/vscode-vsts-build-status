@@ -1,5 +1,6 @@
 import * as assert from "assert";
 import * as sinon from "sinon";
+import {window} from "vscode";
 import {StatusMonitor} from "../src/StatusMonitor";
 import {Settings, WorkspaceVstsSettings} from "../src/Settings";
 import {VstsRestClientImpl} from "../src/VstsRestClient";
@@ -128,22 +129,46 @@ describe("StatusMonitor", () => {
             });
         });
 
-        it("Shows connectivity error when fetching builds fails", done => {
+        it("Shows connection error message when first fetch fails", done => {
             let settingsStub = sinon.createStubInstance(WorkspaceVstsSettings);
             settingsStub.isValid.returns(true);
-            let statusBarSpy = sandbox.spy(StatusBar.prototype, "displayConnectivityError");
+            let statusBarSpy = sandbox.spy(StatusBar.prototype, "displayConnecting");
+            let windowSpy = sandbox.spy(window, "showErrorMessage");
             sinon.stub(settingsStub, "activeBuildDefinitions").get(() => [{}]);
             let clientStub = {
                 getBuilds: sinon.stub().rejects({})
             };
+
+            let sut = new StatusMonitor(settingsStub, <any>clientStub);
+            
+            sut.updateStatus()
+                .then(_ => {
+                    return sut.updateStatus();
+                })
+                .then(_ => {
+                    assert.ok(statusBarSpy.calledTwice, "the status bar should display connecting status");
+                    assert.ok(windowSpy.calledOnce, "error message should be displayed once");
+                    done();
+                    sut.dispose();                
+                });
+        });
+
+        it("Shows retrying connection when fetch builds fails", done => {
+            let settingsStub = sinon.createStubInstance(WorkspaceVstsSettings);
+            settingsStub.isValid.returns(true);
+            let statusBarSpy = sandbox.spy(StatusBar.prototype, "displayConnecting");
+            sinon.stub(settingsStub, "activeBuildDefinitions").get(() => [{}]);
+            let clientStub = {
+                getBuilds: sinon.stub().rejects({})
+            };
+
             let sut = new StatusMonitor(settingsStub, <any>clientStub);
             
             sut.updateStatus().then(_ => {
-                assert.ok(statusBarSpy.calledOnce, "the status bar should display connectivity error");
+                assert.ok(statusBarSpy.calledOnce, "the status bar should display connecting status");
                 done();
                 sut.dispose();
             });
         });
     });
-    
 });
