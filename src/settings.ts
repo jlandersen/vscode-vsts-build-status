@@ -29,7 +29,7 @@ export class WorkspaceVstsSettings implements Settings {
     private activeBuildDefinitionsStateKey: string = "vsts.active.definitions";
     private state: Memento;
     private workspaceSettingsChangedDisposable: Disposable;
-    private onDidChangeSettingsHandler: () => any;
+    private onDidChangeSettingsHandlers: (() => any)[] = [];
 
     public constructor(state: Memento) {
         this.state = state;
@@ -42,8 +42,8 @@ export class WorkspaceVstsSettings implements Settings {
         this.workspaceSettingsChangedDisposable = workspace.onDidChangeConfiguration(() => {
             this.reload();
 
-            if (this.onDidChangeSettingsHandler) {
-                this.onDidChangeSettingsHandler();
+            for (let handler of this.onDidChangeSettingsHandlers) {
+                handler();
             }
         });
 
@@ -58,13 +58,13 @@ export class WorkspaceVstsSettings implements Settings {
         this._activeBuildDefinitions = definitions;
         this.state.update(this.activeBuildDefinitionsStateKey, definitions);
 
-        if (this.onDidChangeSettingsHandler) {
-            this.onDidChangeSettingsHandler();
+        for (let handler of this.onDidChangeSettingsHandlers) {
+            handler();
         }
     }
 
     public onDidChangeSettings(handler: () => any): void {
-        this.onDidChangeSettingsHandler = handler;
+        this.onDidChangeSettingsHandlers.push(handler);
     }
 
     public isValid(): boolean {
