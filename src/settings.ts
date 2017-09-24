@@ -6,6 +6,7 @@ export interface Settings {
     username: string;
     password: string;
     project: string;
+    telemetryEnabled: boolean;
     activeBuildDefinitions: BuildDefinition[];
     definitionsGroup?: BuildDefinition[];
     definitionsGroupName?: string;
@@ -22,6 +23,7 @@ export class WorkspaceVstsSettings implements Settings {
     username: string;
     password: string;
     project: string;
+    telemetryEnabled: boolean;
     definitionsGroup?: BuildDefinition[];
     definitionsGroupName?: string;
 
@@ -29,7 +31,7 @@ export class WorkspaceVstsSettings implements Settings {
     private activeBuildDefinitionsStateKey: string = "vsts.active.definitions";
     private state: Memento;
     private workspaceSettingsChangedDisposable: Disposable;
-    private onDidChangeSettingsHandlers: (() => any)[] = [];
+    private onDidChangeSettingsHandlers: (() => void)[] = [];
 
     public constructor(state: Memento) {
         this.state = state;
@@ -63,7 +65,7 @@ export class WorkspaceVstsSettings implements Settings {
         }
     }
 
-    public onDidChangeSettings(handler: () => any): void {
+    public onDidChangeSettings(handler: () => void) {
         this.onDidChangeSettingsHandlers.push(handler);
     }
 
@@ -120,6 +122,7 @@ export class WorkspaceVstsSettings implements Settings {
         this.username = configuration.get<string>("username").trim();
         this.password = configuration.get<string>("password").trim();
         this.project = configuration.get<string>("project").trim();
+        this.telemetryEnabled = configuration.get<boolean>("telemetryEnabled", true);
 
         const definitionsGroup = configuration.get<string>("definitionsGroup").trim();
         this.definitionsGroupName = configuration.get<string>("definitionsGroupName").trim();
@@ -148,7 +151,7 @@ export function createDefaultSettings(state: Memento): Settings {
 
 export function getDefaultSettings(): Settings {
     if (!settings) {
-        throw Error("No default settings created. Use createdDefaultSettings to register default settings.")
+        throw Error("No default settings created. Use createdDefaultSettings to register default settings.");
     }
 
     return settings;

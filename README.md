@@ -37,5 +37,12 @@ It also allows to add several build definitions grouped into one status bar indi
 }
 ```
 
+## Telemetry
+This extension uses Microsoft Application Insights for:
+- Logging unhandled errors
+- Feature usage (limited to counting activations)
+
+No data logged contain any sensitive information (only operating system is attached to the log events). This is strictly used to know about errors and how many times the different features are used - not the context of use. In addition, all automatic collection provided by Application Insights, is explicitly disabled (see []). You can disable the telemetry with the setting `vsts.telemetryEnabled` set to `false`.
+
 ## License
 MIT, please see LICENSE for details. Copyright (c) 2016 Jeppe Andersen.

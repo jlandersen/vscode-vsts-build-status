@@ -1,6 +1,9 @@
 import {window} from "vscode";
 import {getDefaultSettings} from "../Settings";
 import {isHttpResponseError} from "../VstsRestClient";
+import {AppInsightsClientProvider} from "../Telemetry";
+
+const telemetryClient = AppInsightsClientProvider.getAppInsightsClient();
 
 function errorHandler(error: any) {
     if (!error) {
@@ -25,7 +28,8 @@ function errorHandler(error: any) {
         return;
     }
 
-   window.showErrorMessage("Unexpected error occurred. Please check your Internet connection and your settings are properly configured.");
+    telemetryClient.trackException(error);
+    window.showErrorMessage("Unexpected error occurred. Please check your Internet connection and your settings are properly configured.");
 }
 
 export function handleError(target: Object, propertyKey: string, descriptor: TypedPropertyDescriptor<any>) {

@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
-import {createDefaultSettings, WorkspaceVstsSettings} from "./Settings";
+import {AppInsightsClientProvider} from "./Telemetry";
+import {createDefaultSettings, Settings} from "./Settings";
 import {StatusMonitor} from "./StatusMonitor";
 import {VstsRestClientImpl} from "./VstsRestClient";
 import OpenBuildInBrowserCommand from "./commands/OpenBuildInBrowserCommand";
@@ -15,6 +16,8 @@ export function activate(context: vscode.ExtensionContext) {
     let queueBuildCommand = new QueueBuildCommand(settings, restClient);
     let selectBuildDefinitionCommand = new SelectBuildDefinitionCommand(settings, restClient);
     let statusMonitor = new StatusMonitor(settings, restClient);
+    
+    configureTelemetry(context, settings);;
 
     statusMonitor.begin();
     
@@ -29,4 +32,10 @@ export function activate(context: vscode.ExtensionContext) {
         
     context.subscriptions.push(
         vscode.commands.registerCommand('extension.openVstsQueueBuildSelection', () => queueBuildCommand.execute()));
-}   
+}
+
+function configureTelemetry(context: vscode.ExtensionContext, settings: Settings) {
+    AppInsightsClientProvider.start(settings);
+    let client = AppInsightsClientProvider.getAppInsightsClient();
+    client.trackEvent("started");
+}

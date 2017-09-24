@@ -39,6 +39,7 @@
         "postinstall": "node ./node_modules/vscode/bin/install"
     },
     "dependencies": {
+        "applicationinsights": "^0.21.0",
         "node-fetch": "^1.7.1",
         "openurl": "^1.1.1"
     },
@@ -71,6 +72,11 @@
                     "type": "string",
                     "default": "",
                     "description": "Specifies the password or Personal Access Token to use for accessing VSTS Build information on the account."
+                },
+                "vsts.telemetryEnabled": {
+                    "type": "boolean",
+                    "default": true,
+                    "description": "Enable/disable logging of errors and aggregated feature usage. Set to disabled to opt out."
                 },
                 "vsts.project": {
                     "type": "string",
